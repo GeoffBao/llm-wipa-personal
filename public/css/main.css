@@ -19,8 +19,8 @@
   --header-bg: rgba(253,248,240,0.92);
   --header-border: rgba(160,120,60,0.15);
   --sidebar-width: 230px;
-  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
-  --font-mono: "SF Mono", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+  --font-mono: "JetBrains Mono", "SF Mono", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
   --radius: 10px;
   --radius-sm: 8px;
   --radius-xs: 5px;
@@ -32,13 +32,27 @@
 
 /* ===== RESET ===== */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { font-size: 16px; -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "cv01","cv02","cv03","cv04","kern" 1;
+}
 body {
   font-family: var(--font-sans);
   font-size: 0.9375rem;
   line-height: 1.6;
   color: var(--text);
   background: var(--bg);
+  letter-spacing: -0.011em;
+}
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-sans);
+  font-feature-settings: "cv01","cv02","cv03","cv04","kern" 1;
+  letter-spacing: -0.022em;
 }
 a { color: var(--link-color); text-decoration: none; }
 a:hover { text-decoration: underline; color: var(--blue-hover); }
