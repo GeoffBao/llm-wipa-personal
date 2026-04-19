@@ -5,6 +5,32 @@
 
 ---
 
+## Screenshots
+
+### Homepage — Wiki Index & Domain Navigation
+![Homepage](docs/screenshots/home.png)
+The homepage opens with a bold amber **Wiki Index** hero card surfacing three domain clusters (Methods & PKM, AI & Agents, Camera & Imaging) with direct links to key articles. Below it: a featured concept of the day, a *Did You Know?* digest of random concepts, and a **Recently Updated** feed showing the latest file modifications across the vault — all updating live as you edit in Obsidian.
+
+---
+
+### Article Page — Two-Column Layout with TOC & Infobox
+![Article](docs/screenshots/article.png)
+Every article renders with a sticky right sidebar containing a structured **infobox** (type, created, updated) and a nested **table of contents** auto-generated from headings. The main column has a breadcrumb trail, tag pills, rendered wikilinks, tables, code blocks, and a backlinks panel at the bottom. Max-width typography and `line-height: 1.7` make long mixed Chinese/English articles comfortable to read.
+
+---
+
+### Knowledge Graph — D3 Force-Directed Wikilink Map
+![Knowledge Graph](docs/screenshots/graph.png)
+All 448 notes become nodes in a live D3 force simulation. Node size scales with backlink count; color encodes section (Concept, Source, Map, Synthesis, Prompt, Note, Project). Nodes are draggable. A search box dims all non-matching nodes and their edges. The graph renders the full wikilink topology of the vault — dense clusters emerge naturally where concepts are heavily cross-referenced.
+
+---
+
+### Canvas Viewer — Obsidian Diagrams in the Browser
+![Canvas Viewer](docs/screenshots/canvas-viewer.png)
+`.canvas` files from the Obsidian vault are parsed and rendered as interactive pan/zoom diagrams — color-coded cards, labeled arrows, and grouped layout preserved exactly as designed in Obsidian. No plugins or external renderers required; the viewer is built entirely with vanilla JS and SVG.
+
+---
+
 ## What Is This?
 
 LLM WIPA turns your Obsidian markdown vault into a beautiful, fast, locally-served website — no cloud, no sync, no data leaving your machine. It reads your vault files directly and serves them as a Wikipedia-inspired knowledge base with full-text search, a D3 knowledge graph, wikilink navigation, Canvas diagrams, and Excalidraw viewer.
