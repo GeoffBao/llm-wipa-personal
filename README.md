@@ -288,6 +288,82 @@ launchctl load ~/Library/LaunchAgents/com.llm-wipa.server.plist
 
 ---
 
+## Raycast Integration
+
+Three [Raycast](https://raycast.com/) scripts are included in `raycast-scripts/` to control and access the knowledge base directly from your macOS menu bar — no switching to Terminal or a browser tab required.
+
+### Setup
+
+1. Open **Raycast Preferences → Extensions → Script Commands**
+2. Click **Add Directories** and point it at the `raycast-scripts/` folder in this project
+3. Make sure the scripts are executable (run once):
+
+```bash
+chmod +x raycast-scripts/*.sh
+```
+
+All three scripts will appear under the package name **AI Knowledge Base** in Raycast.
+
+---
+
+### Scripts
+
+#### 🟢 `kb-status.sh` — Server Status Monitor
+
+```
+Title:    LLM KB Server Status
+Mode:     inline (shows result in Raycast menu bar)
+Refresh:  every 30 seconds
+```
+
+Pings `http://localhost:3000` and displays a live status badge directly in the Raycast menu bar without opening any window. Auto-refreshes every 30 seconds so you always know at a glance whether the server is up.
+
+- **🟢 Running on http://localhost:3000** — server is healthy and accepting requests
+- **🔴 Server offline** — LaunchAgent has stopped or hasn't been loaded yet
+
+> Useful as a persistent ambient indicator while working in Obsidian — you can see the server state without leaving your editor.
+
+---
+
+#### 🧠 `open-knowledge-base.sh` — One-Key Open
+
+```
+Title:    Open LLM Knowledge Base
+Mode:     silent (no output window)
+```
+
+Opens the knowledge base homepage in your default browser with a single Raycast keystroke. Includes a built-in safety check: if the server is not already running it calls `launchctl start com.llm-wipa.server` and waits 2 seconds before opening the browser, so the page is always reachable regardless of server state.
+
+**Recommended:** assign a global hotkey (e.g. `⌥K`) in Raycast so you can jump to your knowledge base from any app in under a second.
+
+---
+
+#### 🔍 `search-knowledge-base.sh` — Instant Search
+
+```
+Title:    Search LLM Knowledge Base
+Mode:     silent
+Argument: text input with placeholder "搜索词…"
+```
+
+Accepts a free-text query directly in the Raycast search bar, URL-encodes it via Python's `urllib.parse.quote` (handles CJK characters and special symbols correctly), and opens `http://localhost:3000/search?q=<encoded>` in your browser — landing directly on the full search results page.
+
+**Example:** type `agent memory` in Raycast → browser opens with all matching concepts, sources, and notes pre-filtered.
+
+> Supports Chinese, Japanese, and mixed-language queries out of the box because of the URL encoding step.
+
+---
+
+### Recommended Raycast Hotkeys
+
+| Script | Suggested Hotkey | When to use |
+|---|---|---|
+| Open LLM Knowledge Base | `⌥K` | Jump to homepage from anywhere |
+| Search LLM Knowledge Base | `⌥F` | Search without opening the browser first |
+| LLM KB Server Status | *(always visible in menu bar)* | Ambient health check |
+
+---
+
 ## Pages & Routes
 
 | Route | Description |
