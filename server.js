@@ -19,6 +19,7 @@ import canvasRouter from './src/routes/canvasRoute.js';
 import { loadCanvases } from './src/vault/canvas.js';
 import excalidrawRouter from './src/routes/excalidrawRoute.js';
 import { loadExcalidrawFiles } from './src/vault/excalidraw.js';
+import readwiseRouter from './src/routes/readwiseRoute.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -40,6 +41,7 @@ app.use(readingRouter);
 app.use(graphRouter);
 app.use(canvasRouter);
 app.use(excalidrawRouter);
+app.use(readwiseRouter);
 
 // Debounced vault watcher
 let rebuildTimer = null;
