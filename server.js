@@ -23,6 +23,9 @@ import { loadExcalidrawFiles } from './src/vault/excalidraw.js';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
 
+// Body parsing for API PUT/POST
+app.use(express.json({ limit: '10mb' }));
+
 // Static files
 app.use('/public', express.static(join(__dirname, 'public')));
 app.use('/assets', express.static(join(VAULT_PATH, 'Assets')));

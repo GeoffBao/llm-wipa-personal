@@ -16,10 +16,11 @@ async function loadTemplate(name) {
 
 // Simple template engine: replace {{VAR}}, {{{RAW_VAR}}}, {{#if VAR}}...{{/if}}
 function interpolate(template, vars) {
-  // Handle {{#if VAR}}...{{/if}} blocks
-  let result = template.replace(/\{\{#if\s+(\w+)\}\}([\s\S]*?)\{\{\/if\}\}/g, (_, key, content) => {
-    return vars[key] ? content : '';
-  });
+  // Handle {{#if VAR}}...{{else}}...{{/if}} blocks (else branch optional)
+  let result = template.replace(
+    /\{\{#if\s+(\w+)\}\}([\s\S]*?)(?:\{\{else\}\}([\s\S]*?))?\{\{\/if\}\}/g,
+    (_, key, trueContent, falseContent) => vars[key] ? trueContent : (falseContent || '')
+  );
   // Triple braces: raw HTML (no escaping)
   result = result.replace(/\{\{\{(\w+)\}\}\}/g, (_, key) => vars[key] ?? '');
   // Double braces: escaped HTML

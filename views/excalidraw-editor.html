@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{pageTitle}}</title>
+  <link rel="icon" type="image/svg+xml" href="/public/favicon.svg">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #f5f5f5; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+
+    /* ── Top bar ── */
+    .ed-topbar {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+      height: 48px;
+      background: rgba(253,248,240,0.95);
+      border-bottom: 1px solid #e5d9c4;
+      backdrop-filter: saturate(180%) blur(12px);
+      display: flex; align-items: center; gap: 10px; padding: 0 14px;
+    }
+    .ed-back { color: #1a56db; text-decoration: none; font-size: .83rem; display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+    .ed-back:hover { color: #1240a8; }
+    .ed-title-wrap { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
+    .ed-title-input {
+      font-size: .92rem; font-weight: 600; color: #1c1710;
+      background: transparent; border: none; outline: none;
+      border-bottom: 1.5px solid transparent;
+      padding: 2px 4px; min-width: 180px; max-width: 400px;
+      transition: border-color .15s;
+    }
+    .ed-title-input:focus { border-bottom-color: #1a56db; background: rgba(255,255,255,.7); border-radius: 2px 2px 0 0; }
+    .ed-title-input::placeholder { color: #999; font-weight: 400; }
+    .ed-badge { font-size: .7rem; background: #e5d9c4; color: #6b5f50; padding: 2px 7px; border-radius: 10px; flex-shrink: 0; }
+    .ed-actions { display: flex; gap: 8px; align-items: center; margin-left: auto; flex-shrink: 0; }
+    .ed-btn {
+      padding: 6px 14px; border-radius: 6px; font-size: .83rem; font-weight: 500;
+      cursor: pointer; border: none; transition: all .15s;
+    }
+    .ed-btn-secondary { background: #f0ece4; color: #4a3f30; }
+    .ed-btn-secondary:hover { background: #e5d9c4; }
+    .ed-btn-primary { background: #1a56db; color: #fff; }
+    .ed-btn-primary:hover { background: #1240a8; }
+    .ed-btn-primary:disabled { background: #8aacef; cursor: not-allowed; }
+    .ed-status { font-size: .75rem; color: #8a7a66; }
+    .ed-status.saved { color: #15803d; }
+    .ed-status.error { color: #dc2626; }
+
+    /* ── Canvas area ── */
+    #excalidraw-root {
+      position: fixed;
+      top: 48px; left: 0; right: 0; bottom: 0;
+    }
+
+    /* ── New file modal ── */
+    .modal-overlay {
+      position: fixed; inset: 0; z-index: 500;
+      background: rgba(0,0,0,.4);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .modal-overlay.hidden { display: none; }
+    .modal {
+      background: #fff; border-radius: 10px; padding: 28px 32px;
+      box-shadow: 0 12px 40px rgba(0,0,0,.18);
+      width: 360px;
+    }
+    .modal h2 { font-size: 1.05rem; color: #1c1710; margin-bottom: 16px; }
+    .modal input {
+      width: 100%; padding: 9px 12px; border: 1.5px solid #e5d9c4;
+      border-radius: 6px; font-size: .9rem; outline: none;
+      margin-bottom: 16px;
+    }
+    .modal input:focus { border-color: #1a56db; }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+  </style>
+</head>
+<body>
+
+  <!-- Top bar -->
+  <div class="ed-topbar">
+    <a href="/excalidraw" class="ed-back">← Drawings</a>
+    <div class="ed-title-wrap">
+      <input type="text" class="ed-title-input" id="title-input"
+             value="{{title}}" placeholder="Untitled drawing…" spellcheck="false">
+      {{#if isNew}}<span class="ed-badge">New</span>{{/if}}
+    </div>
+    <div class="ed-actions">
+      <span class="ed-status" id="save-status"></span>
+      <button class="ed-btn ed-btn-secondary" id="btn-view" {{#if isNew}}style="display:none"{{/if}}>
+        View only
+      </button>
+      <button class="ed-btn ed-btn-primary" id="btn-save">
+        {{#if isNew}}Create{{else}}Save{{/if}}
+      </button>
+    </div>
+  </div>
+
+  <!-- Excalidraw mount point -->
+  <div id="excalidraw-root"></div>
+
+  <!-- "File already exists" / error modal -->
+  <div class="modal-overlay hidden" id="error-modal">
+    <div class="modal">
+      <h2 id="error-modal-title">Error</h2>
+      <p id="error-modal-msg" style="font-size:.88rem;color:#4a3f30;margin-bottom:18px;"></p>
+      <div class="modal-actions">
+        <button class="ed-btn ed-btn-primary" onclick="document.getElementById('error-modal').classList.add('hidden')">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- React + Excalidraw UMD -->
+  <script src="/public/vendor/react.production.min.js"></script>
+  <script src="/public/vendor/react-dom.production.min.js"></script>
+  <script src="/public/vendor/excalidraw.production.min.js"></script>
+
+  <script>
+  (() => {
+    const SLUG = {{#if isNew}}null{{else}}'{{slug}}'{{/if}};
+    const IS_NEW = {{#if isNew}}true{{else}}false{{/if}};
+    const INITIAL_DATA = {{{drawingData}}};
+
+    const { Excalidraw } = ExcalidrawLib;
+    const { createElement: h, useState, useEffect, useRef, useCallback } = React;
+
+    let excalidrawAPI = null;
+
+    // ── Editor component ──────────────────────────────────────────────────────
+    function Editor() {
+      const apiRef = useCallback(api => { excalidrawAPI = api; }, []);
+
+      const initialData = INITIAL_DATA ? {
+        elements: INITIAL_DATA.elements || [],
+        appState: {
+          ...(INITIAL_DATA.appState || {}),
+          // Restore background color; defaults to white for new files
+          viewBackgroundColor: (INITIAL_DATA.appState || {}).viewBackgroundColor || '#ffffff',
+        },
+      } : null;
+
+      return h(Excalidraw, {
+        excalidrawAPI: apiRef,
+        initialData,
+        UIOptions: {
+          canvasActions: {
+            // Hide Excalidraw's own save-to-disk button — we have our own
+            saveToActiveFile: false,
+            saveAsImage: true,
+          },
+        },
+      });
+    }
+
+    // Mount
+    const root = ReactDOM.createRoot(document.getElementById('excalidraw-root'));
+    root.render(h(Editor, null));
+
+    // ── Save logic ────────────────────────────────────────────────────────────
+    const saveBtn  = document.getElementById('btn-save');
+    const statusEl = document.getElementById('save-status');
+    const titleEl  = document.getElementById('title-input');
+    const viewBtn  = document.getElementById('btn-view');
+
+    function setStatus(msg, cls = '') {
+      statusEl.textContent = msg;
+      statusEl.className = 'ed-status ' + cls;
+    }
+
+    async function getScenePayload() {
+      if (!excalidrawAPI) return null;
+      const elements  = excalidrawAPI.getSceneElements();
+      const appState  = excalidrawAPI.getAppState();
+      const files     = excalidrawAPI.getFiles();
+      return { elements, appState, files };
+    }
+
+    async function handleSave() {
+      const title = titleEl.value.trim();
+      if (!title) { titleEl.focus(); titleEl.style.borderBottomColor = '#dc2626'; return; }
+      titleEl.style.borderBottomColor = '';
+
+      const payload = await getScenePayload();
+      if (!payload) return;
+
+      saveBtn.disabled = true;
+      setStatus('Saving…');
+
+      try {
+        if (IS_NEW) {
+          const res = await fetch('/api/excalidraw', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title, ...payload }),
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'Failed to create');
+          // Redirect to the edit page of the newly created file
+          window.location.href = `/excalidraw/${data.slug}/edit`;
+        } else {
+          const res = await fetch(`/api/excalidraw/${SLUG}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'Failed to save');
+          setStatus('Saved ✓', 'saved');
+          setTimeout(() => setStatus(''), 3000);
+        }
+      } catch (e) {
+        setStatus('Error', 'error');
+        document.getElementById('error-modal-title').textContent = 'Save failed';
+        document.getElementById('error-modal-msg').textContent = e.message;
+        document.getElementById('error-modal').classList.remove('hidden');
+      } finally {
+        saveBtn.disabled = false;
+      }
+    }
+
+    saveBtn.addEventListener('click', handleSave);
+
+    // Cmd/Ctrl + S shortcut
+    window.addEventListener('keydown', e => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+        e.preventDefault();
+        handleSave();
+      }
+    });
+
+    // View-only button
+    if (viewBtn) {
+      viewBtn.addEventListener('click', () => {
+        window.location.href = `/excalidraw/${SLUG}`;
+      });
+    }
+
+    // Auto-save every 60 s while editing an existing file
+    if (!IS_NEW) {
+      setInterval(async () => {
+        const payload = await getScenePayload();
+        if (!payload) return;
+        const res = await fetch(`/api/excalidraw/${SLUG}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (res.ok) {
+          setStatus('Auto-saved', 'saved');
+          setTimeout(() => setStatus(''), 2000);
+        }
+      }, 60_000);
+    }
+  })();
+  </script>
+</body>
+</html>
