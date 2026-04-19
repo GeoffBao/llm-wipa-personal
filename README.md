@@ -31,9 +31,17 @@ All 448 notes become nodes in a live D3 force simulation. Node size scales with 
 
 ---
 
+### Readwise Dashboard — Live Reader API Integration
+![Readwise Dashboard](docs/screenshots/readwise-dashboard.png)
+A full **Readwise Reader** dashboard that pulls live data via the Readwise API v3 (`GET /list`) — saved articles, inbox, read-later queue, and archive — all displayed with rich metadata. Features include: stats row (Saved / Inbox / Later / Archive / Completed %), location filter tabs, color-coded location badges, reading progress bars with percentage labels, estimated read time from word count, and article summaries. An in-memory cache (5 min TTL) keeps it snappy; a status bar shows live/vault mode and cache age. Falls back gracefully to vault files when no API token is set.
+
+![Readwise Detail](docs/screenshots/readwise-v2.png)
+
+---
+
 ## What Is This?
 
-LLM WIPA turns your Obsidian markdown vault into a beautiful, fast, locally-served website — no cloud, no sync, no data leaving your machine. It reads your vault files directly and serves them as a Wikipedia-inspired knowledge base with full-text search, a D3 knowledge graph, wikilink navigation, Canvas diagrams, and Excalidraw viewer.
+LLM WIPA turns your Obsidian markdown vault into a beautiful, fast, locally-served website — no cloud, no sync, no data leaving your machine. It reads your vault files directly and serves them as a Wikipedia-inspired knowledge base with full-text search, a D3 knowledge graph, wikilink navigation, Canvas diagrams, an Excalidraw viewer, and a **live Readwise Reader dashboard** powered by the Readwise API v3.
 
 Designed for vaults that grow into the hundreds or thousands of files, with mixed Chinese/English content, heavy wikilink graphs, and structured metadata.
 
@@ -59,6 +67,13 @@ Designed for vaults that grow into the hundreds or thousands of files, with mixe
 - **Knowledge Graph** — force-directed D3 graph of all wikilink connections; color-coded by section; searchable; draggable nodes
 - **Canvas Viewer** — renders Obsidian `.canvas` files as interactive pan/zoom diagrams
 - **Excalidraw Viewer** — renders `.excalidraw` JSON files as SVG; supports rectangles, ellipses, diamonds, arrows, text, pan/zoom
+
+### Readwise Integration
+- **Live Reader API** — connects to Readwise API v3 (`GET /list`) when `READWISE_TOKEN` is set in `.env`; graceful fallback to vault files
+- **Dashboard** — stats row (Saved / Inbox / Later / Archive / Completed %) with location filter tabs and color-coded badges
+- **Reading progress** — progress bar + percentage label; estimated read time from word count; article summary (2-line clamp)
+- **Smart caching** — in-memory cache with 5 min TTL; `/readwise/refresh` endpoint to bust cache on demand
+- **API status bar** — shows live/vault mode and cache age at a glance
 
 ### Design
 - Warm cream background (`#fdf8f0`) with amber accents — easy on the eyes for long reading sessions
@@ -123,6 +138,7 @@ llm-wipa/
 │       ├── graph.js            # GET /graph, GET /api/graph
 │       ├── canvasRoute.js      # GET /canvas, GET /canvas/:slug
 │       ├── excalidrawRoute.js  # GET /excalidraw, GET /excalidraw/:slug
+│       ├── readwise.js         # GET /readwise, GET /readwise/refresh
 │       └── api.js              # GET /api/search, GET /api/random
 │
 ├── views/
@@ -135,6 +151,7 @@ llm-wipa/
 │   ├── graph.html              # Full-screen D3 graph (standalone, no layout)
 │   ├── canvas.html             # Canvas viewer (standalone)
 │   ├── excalidraw.html         # Excalidraw viewer (standalone)
+│   ├── readwise.html           # Readwise Reader dashboard
 │   └── 404.html                # Not found with suggestions
 │
 └── public/
@@ -382,6 +399,8 @@ Accepts a free-text query directly in the Raycast search bar, URL-encodes it via
 | `GET /api/search?q=` | JSON autocomplete results |
 | `GET /api/random` | JSON `{ slug }` for random concept |
 | `GET /api/graph` | JSON graph data for D3 |
+| `GET /readwise` | Readwise Reader dashboard |
+| `GET /readwise/refresh` | Bust readwise cache and re-fetch |
 
 ---
 
