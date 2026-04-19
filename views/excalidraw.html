@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{pageTitle}}</title>
+  <link rel="icon" type="image/svg+xml" href="/public/favicon.svg">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+
+    .ex-topbar {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      height: 48px;
+      background: rgba(26,27,38,.92); border-bottom: 1px solid #2a2b3d;
+      backdrop-filter: blur(8px);
+      display: flex; align-items: center; gap: 12px; padding: 0 16px;
+    }
+    .ex-back { color: #7aa2f7; text-decoration: none; font-size: .85rem; display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+    .ex-back:hover { color: #c0caf5; }
+    .ex-title { font-size: .9rem; font-weight: 700; color: #c0caf5; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ex-meta { font-size: .78rem; color: #565f89; flex-shrink: 0; }
+
+    .ex-controls {
+      position: fixed; bottom: 16px; right: 16px; z-index: 100;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .ctrl-btn {
+      width: 32px; height: 32px;
+      background: rgba(26,27,38,.9); border: 1px solid #2a2b3d;
+      border-radius: 4px; color: #a9b1d6; font-size: 1rem; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .ctrl-btn:hover { background: #24283b; color: #7aa2f7; }
+
+    #ex-canvas {
+      position: fixed;
+      top: 48px; left: 0; right: 0; bottom: 0;
+      overflow: hidden;
+      cursor: grab;
+    }
+    #ex-canvas.grabbing { cursor: grabbing; }
+    #ex-svg {
+      position: absolute;
+      transform-origin: 0 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="ex-topbar">
+    <a href="/excalidraw" class="ex-back">← Excalidraw</a>
+    <span class="ex-title">{{title}}</span>
+    <span class="ex-meta">{{elementCount}} elements</span>
+  </div>
+
+  <div id="ex-canvas">
+    <svg id="ex-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+  </div>
+
+  <div class="ex-controls">
+    <button class="ctrl-btn" id="btn-fit" title="Fit view">⊡</button>
+    <button class="ctrl-btn" id="btn-plus" title="Zoom in">+</button>
+    <button class="ctrl-btn" id="btn-minus" title="Zoom out">−</button>
+  </div>
+
+  <script>
+  (() => {
+    const DATA = {{{drawingData}}};
+    const { elements, background } = DATA;
+
+    const svgEl = document.getElementById('ex-svg');
+    const container = document.getElementById('ex-canvas');
+
+    // ── SVG helpers ──────────────────────────────────────────────
+    function svgNS(tag, attrs = {}) {
+      const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+      for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+      return el;
+    }
+
+    function escapeXml(s) {
+      return String(s)
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    // ── Bounding box ─────────────────────────────────────────────
+    function computeBounds(els) {
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      for (const e of els) {
+        if (e.type === 'arrow' || e.type === 'line') {
+          const pts = e.points || [[0,0]];
+          for (const [px, py] of pts) {
+            minX = Math.min(minX, e.x + px);
+            minY = Math.min(minY, e.y + py);
+            maxX = Math.max(maxX, e.x + px);
+            maxY = Math.max(maxY, e.y + py);
+          }
+        } else {
+          minX = Math.min(minX, e.x);
+          minY = Math.min(minY, e.y);
+          maxX = Math.max(maxX, e.x + (e.width || 0));
+          maxY = Math.max(maxY, e.y + (e.height || 0));
+        }
+      }
+      return { minX, minY, maxX, maxY,
+        width: maxX - minX, height: maxY - minY };
+    }
+
+    // ── Stroke/fill helpers ───────────────────────────────────────
+    function strokeDash(style, width) {
+      if (style === 'dashed') return `${width * 6},${width * 4}`;
+      if (style === 'dotted') return `${width},${width * 3}`;
+      return 'none';
+    }
+
+    function fillColor(e) {
+      const c = e.backgroundColor;
+      if (!c || c === 'transparent') return 'none';
+      if (e.fillStyle === 'hachure' || e.fillStyle === 'cross-hatch') {
+        // Approximate hachure as semi-transparent fill
+        return c;
+      }
+      return c;
+    }
+
+    function fillOpacity(e) {
+      if (!e.backgroundColor || e.backgroundColor === 'transparent') return 0;
+      if (e.fillStyle === 'hachure') return 0.35;
+      if (e.fillStyle === 'cross-hatch') return 0.45;
+      return 1;
+    }
+
+    function commonAttrs(e) {
+      return {
+        stroke: e.strokeColor || '#1e1e1e',
+        'stroke-width': e.strokeWidth || 1,
+        'stroke-dasharray': strokeDash(e.strokeStyle, e.strokeWidth || 1),
+        fill: fillColor(e),
+        'fill-opacity': fillOpacity(e),
+        opacity: (e.opacity ?? 100) / 100,
+      };
+    }
+
+    // ── Arrowhead marker defs ─────────────────────────────────────
+    function ensureMarker(defs, color, id) {
+      if (svgEl.querySelector(`#${id}`)) return;
+      const m = svgNS('marker', {
+        id, markerWidth: '8', markerHeight: '8',
+        refX: '6', refY: '3', orient: 'auto',
+      });
+      const path = svgNS('path', {
+        d: 'M0,0 L0,6 L8,3 z',
+        fill: color,
+      });
+      m.appendChild(path);
+      defs.appendChild(m);
+    }
+
+    // ── Element renderers ─────────────────────────────────────────
+    function renderRect(e) {
+      const r = e.roundness ? Math.min(8, e.width * 0.1, e.height * 0.1) : 0;
+      return svgNS('rect', {
+        x: e.x, y: e.y, width: e.width, height: e.height,
+        rx: r, ry: r,
+        ...commonAttrs(e),
+      });
+    }
+
+    function renderEllipse(e) {
+      return svgNS('ellipse', {
+        cx: e.x + e.width / 2, cy: e.y + e.height / 2,
+        rx: e.width / 2, ry: e.height / 2,
+        ...commonAttrs(e),
+      });
+    }
+
+    function renderDiamond(e) {
+      const cx = e.x + e.width / 2, cy = e.y + e.height / 2;
+      const pts = `${cx},${e.y} ${e.x + e.width},${cy} ${cx},${e.y + e.height} ${e.x},${cy}`;
+      return svgNS('polygon', { points: pts, ...commonAttrs(e) });
+    }
+
+    function renderLineOrArrow(e, defs) {
+      const pts = (e.points || [[0,0],[e.width||0, e.height||0]]);
+      if (!pts.length) return null;
+
+      const absPoints = pts.map(([px,py]) => [e.x + px, e.y + py]);
+      const color = e.strokeColor || '#1e1e1e';
+      const markerId = 'arr-' + color.replace('#','').replace(/[^a-zA-Z0-9]/g,'_');
+
+      let pathD;
+      if (absPoints.length === 2) {
+        pathD = `M ${absPoints[0][0]},${absPoints[0][1]} L ${absPoints[1][0]},${absPoints[1][1]}`;
+      } else {
+        // Catmull-Rom spline approximation for multi-point paths
+        pathD = `M ${absPoints[0][0]},${absPoints[0][1]}`;
+        for (let i = 1; i < absPoints.length; i++) {
+          pathD += ` L ${absPoints[i][0]},${absPoints[i][1]}`;
+        }
+      }
+
+      const attrs = {
+        d: pathD,
+        stroke: color,
+        'stroke-width': e.strokeWidth || 1.5,
+        'stroke-dasharray': strokeDash(e.strokeStyle, e.strokeWidth || 1.5),
+        fill: 'none',
+        opacity: (e.opacity ?? 100) / 100,
+      };
+
+      if (e.type === 'arrow' && e.endArrowhead !== null && e.endArrowhead !== 'none') {
+        ensureMarker(defs, color, markerId);
+        attrs['marker-end'] = `url(#${markerId})`;
+      }
+      if (e.startArrowhead && e.startArrowhead !== 'none') {
+        const startId = markerId + '_s';
+        ensureMarker(defs, color, startId);
+        attrs['marker-start'] = `url(#${startId})`;
+      }
+
+      return svgNS('path', attrs);
+    }
+
+    function renderText(e) {
+      const g = svgNS('g', { opacity: (e.opacity ?? 100) / 100 });
+      const lines = (e.text || '').split('\n');
+      const fontSize = e.fontSize || 16;
+      const lineHeight = fontSize * 1.35;
+      const color = e.strokeColor || '#1e1e1e';
+      const align = e.textAlign || 'left';
+
+      const anchorMap = { left: 'start', center: 'middle', right: 'end' };
+      const anchor = anchorMap[align] || 'start';
+
+      let startX;
+      if (align === 'center') startX = e.x + (e.width || 0) / 2;
+      else if (align === 'right') startX = e.x + (e.width || 0);
+      else startX = e.x;
+
+      // Vertical align: middle by default
+      const totalH = lines.length * lineHeight;
+      let startY = e.y + ((e.height || totalH) - totalH) / 2 + fontSize;
+
+      const fontFamily = {1:'cursive', 2:'cursive', 3:'monospace', 4:'sans-serif'}[e.fontFamily] || 'sans-serif';
+
+      for (const line of lines) {
+        if (!line.trim()) { startY += lineHeight; continue; }
+        const t = svgNS('text', {
+          x: startX, y: startY,
+          fill: color,
+          'font-size': fontSize,
+          'font-family': fontFamily,
+          'text-anchor': anchor,
+          'dominant-baseline': 'auto',
+        });
+        t.textContent = line;
+        g.appendChild(t);
+        startY += lineHeight;
+      }
+      return g;
+    }
+
+    // ── Render all elements ───────────────────────────────────────
+    function render() {
+      svgEl.innerHTML = '';
+
+      const defs = svgNS('defs');
+      svgEl.appendChild(defs);
+
+      // Background rect
+      const bounds = computeBounds(elements);
+      const PAD = 40;
+      const vx = bounds.minX - PAD, vy = bounds.minY - PAD;
+      const vw = bounds.width + PAD * 2, vh = bounds.height + PAD * 2;
+
+      svgEl.setAttribute('width', vw);
+      svgEl.setAttribute('height', vh);
+      svgEl.setAttribute('viewBox', `${vx} ${vy} ${vw} ${vh}`);
+
+      const bg = svgNS('rect', {
+        x: vx, y: vy, width: vw, height: vh,
+        fill: background || '#ffffff',
+      });
+      svgEl.appendChild(bg);
+
+      // Render order: groups/frames first, then others, text last
+      const order = ['rectangle','ellipse','diamond','line','arrow','text'];
+      const sorted = [...elements].sort((a, b) => {
+        const ai = order.indexOf(a.type), bi = order.indexOf(b.type);
+        return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+      });
+
+      for (const e of sorted) {
+        let el = null;
+        if (e.type === 'rectangle') el = renderRect(e);
+        else if (e.type === 'ellipse') el = renderEllipse(e);
+        else if (e.type === 'diamond') el = renderDiamond(e);
+        else if (e.type === 'arrow' || e.type === 'line') el = renderLineOrArrow(e, defs);
+        else if (e.type === 'text') el = renderText(e);
+        if (el) svgEl.appendChild(el);
+      }
+
+      return { vx, vy, vw, vh };
+    }
+
+    const bounds = render();
+
+    // ── Pan & Zoom ────────────────────────────────────────────────
+    let tx = 0, ty = 0, scale = 1;
+
+    function applyTransform() {
+      svgEl.style.transform = `translate(${tx}px,${ty}px) scale(${scale})`;
+    }
+
+    function fitView() {
+      const cw = container.clientWidth, ch = container.clientHeight;
+      const PAD = 32;
+      const scaleX = (cw - PAD * 2) / bounds.vw;
+      const scaleY = (ch - PAD * 2) / bounds.vh;
+      scale = Math.min(scaleX, scaleY, 2);
+      tx = (cw - bounds.vw * scale) / 2 - bounds.vx * scale;
+      ty = (ch - bounds.vh * scale) / 2 - bounds.vy * scale;
+      applyTransform();
+    }
+
+    fitView();
+
+    // Mouse drag
+    let dragging = false, dragStartX = 0, dragStartY = 0, dragTx = 0, dragTy = 0;
+    container.addEventListener('mousedown', e => {
+      dragging = true; dragStartX = e.clientX; dragStartY = e.clientY;
+      dragTx = tx; dragTy = ty;
+      container.classList.add('grabbing');
+    });
+    window.addEventListener('mousemove', e => {
+      if (!dragging) return;
+      tx = dragTx + (e.clientX - dragStartX);
+      ty = dragTy + (e.clientY - dragStartY);
+      applyTransform();
+    });
+    window.addEventListener('mouseup', () => { dragging = false; container.classList.remove('grabbing'); });
+
+    // Wheel zoom
+    container.addEventListener('wheel', e => {
+      e.preventDefault();
+      const factor = e.deltaY < 0 ? 1.12 : 0.89;
+      const rect = container.getBoundingClientRect();
+      const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+      tx = mx - (mx - tx) * factor;
+      ty = my - (my - ty) * factor;
+      scale *= factor;
+      applyTransform();
+    }, { passive: false });
+
+    // Controls
+    document.getElementById('btn-fit').addEventListener('click', fitView);
+    document.getElementById('btn-plus').addEventListener('click', () => {
+      const cx = container.clientWidth / 2, cy = container.clientHeight / 2;
+      tx = cx - (cx - tx) * 1.3; ty = cy - (cy - ty) * 1.3; scale *= 1.3;
+      applyTransform();
+    });
+    document.getElementById('btn-minus').addEventListener('click', () => {
+      const cx = container.clientWidth / 2, cy = container.clientHeight / 2;
+      tx = cx - (cx - tx) * 0.77; ty = cy - (cy - ty) * 0.77; scale *= 0.77;
+      applyTransform();
+    });
+  })();
+  </script>
+</body>
+</html>

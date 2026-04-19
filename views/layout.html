@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{pageTitle}}</title>
+  <link rel="icon" type="image/svg+xml" href="/public/favicon.svg">
+  <link rel="stylesheet" href="/public/css/main.css">
+  <link rel="stylesheet" href="/public/css/hljs.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <a href="/" class="site-logo">
+        <img src="/public/favicon.svg" class="logo-img" alt="LLM KB" width="28" height="28">
+        <span class="logo-text">LLM KB</span>
+        <span class="logo-byline">by Eason</span>
+      </a>
+      <form class="header-search" action="/search" method="get" autocomplete="off" role="search">
+        <div class="search-wrap">
+          <input
+            type="search"
+            name="q"
+            id="search-input"
+            placeholder="Search concepts, notes, sources…"
+            value="{{query}}"
+            aria-label="Search knowledge base"
+          >
+          <button type="submit" class="search-btn" aria-label="Search">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+            </svg>
+          </button>
+          <div class="search-autocomplete" id="search-autocomplete" hidden></div>
+        </div>
+      </form>
+      <nav class="header-nav">
+        <a href="/" class="nav-link">Home</a>
+        <a href="/browse/concepts" class="nav-link">Concepts</a>
+        <a href="/browse/notes" class="nav-link">Notes</a>
+        <a href="/reading" class="nav-link">Reading</a>
+        <a href="/graph" class="nav-link">Graph</a>
+        <a href="/search" class="nav-link">Search</a>
+      </nav>
+      <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </header>
+
+  <div class="page-body">
+    <aside class="sidebar" id="sidebar">
+      <nav class="sidebar-nav">
+        <div class="sidebar-section">
+          <div class="sidebar-heading">Wiki</div>
+          <ul>
+            <li><a href="/" class="sidebar-link">🏠 Home</a></li>
+            <li><a href="/browse/mocs" class="sidebar-link">🗺️ Knowledge Maps</a></li>
+            <li><a href="/browse/concepts" class="sidebar-link">💡 Concepts</a></li>
+            <li><a href="/browse/sources" class="sidebar-link">📄 Sources</a></li>
+            <li><a href="/browse/synthesis" class="sidebar-link">📊 Synthesis</a></li>
+            <li><a href="/browse/prompts" class="sidebar-link">✍️ Prompts</a></li>
+          </ul>
+        </div>
+        <div class="sidebar-section">
+          <div class="sidebar-heading">Visualize</div>
+          <ul>
+            <li><a href="/graph" class="sidebar-link">🔮 Knowledge Graph</a></li>
+            <li><a href="/diagrams" class="sidebar-link">📐 Canvas Diagrams</a></li>
+            <li><a href="/excalidraw" class="sidebar-link">✏️ Excalidraw</a></li>
+          </ul>
+        </div>
+        <div class="sidebar-section">
+          <div class="sidebar-heading">Personal</div>
+          <ul>
+            <li><a href="/browse/notes" class="sidebar-link">📝 Notes</a></li>
+            <li><a href="/browse/projects" class="sidebar-link">🚀 Projects</a></li>
+            <li><a href="/reading" class="sidebar-link">📚 Reading Shelf</a></li>
+            <li><a href="#" id="random-link" class="sidebar-link">🎲 Random Concept</a></li>
+          </ul>
+        </div>
+        <div class="sidebar-section">
+          <div class="sidebar-heading">Topics</div>
+          <ul>
+            <li><a href="/browse/tags/agent" class="sidebar-link">🤖 AI & Agents</a></li>
+            <li><a href="/browse/tags/pkm" class="sidebar-link">🧠 PKM & Knowledge</a></li>
+            <li><a href="/browse/tags/camera" class="sidebar-link">📷 Camera & Imaging</a></li>
+            <li><a href="/browse/tags/coding" class="sidebar-link">⚙️ Software & Tools</a></li>
+          </ul>
+        </div>
+      </nav>
+    </aside>
+
+    <main class="main-content" id="main-content">
+      {{{content}}}
+    </main>
+  </div>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <img src="/public/favicon.svg" width="16" height="16" alt="" style="opacity:.5">
+      <span><strong>LLM KB</strong> — Eason's Personal Knowledge Base</span>
+      <span>·</span>
+      <a href="/">Home</a>
+      <span>·</span>
+      <a href="/browse/concepts">Concepts</a>
+      <span>·</span>
+      <a href="/reading">Reading</a>
+    </div>
+  </footer>
+
+  <script src="/public/js/search.js" defer></script>
+  <script src="/public/js/toc-highlight.js" defer></script>
+  <script src="/public/js/mobile-nav.js" defer></script>
+  <script src="/public/vendor/mermaid.min.js" defer></script>
+  <script>
+    document.getElementById('random-link')?.addEventListener('click', async (e) => {
+      e.preventDefault();
+      const r = await fetch('/api/random').then(r => r.json());
+      if (r.slug) window.location.href = '/wiki/' + r.slug;
+    });
+    window.addEventListener('load', () => {
+      if (window.mermaid) mermaid.initialize({ startOnLoad: true, theme: 'default' });
+    });
+  </script>
+</body>
+</html>

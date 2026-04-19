@@ -1,0 +1,78 @@
+<div class="home-page">
+
+  <!-- Wiki Index Hero -->
+  <div class="index-hero">
+    <div class="index-hero-left">
+      <div class="index-hero-eyebrow">Knowledge Index</div>
+      <h2 class="index-hero-title">Wiki Index</h2>
+      <div class="index-hero-stats">
+        <span class="index-stat"><strong>{{totalFiles}}</strong> articles</span>
+        <span class="index-stat"><strong>{{totalConcepts}}</strong> concepts</span>
+        <span class="index-stat"><strong>{{totalSources}}</strong> sources</span>
+        <span class="index-stat"><strong>{{totalBooks}}</strong> books</span>
+      </div>
+      <a href="/wiki/wiki-index" class="index-hero-btn">Browse Full Index →</a>
+    </div>
+    <div class="index-domains">
+      {{{indexNav}}}
+    </div>
+  </div>
+
+  <!-- Main Two-Column Layout -->
+  <div class="home-main-grid">
+
+    <!-- Left: Featured + DYK -->
+    <div class="home-col-main">
+      {{{featuredConcept}}}
+
+      <div class="home-section">
+        <div class="home-section-header">
+          <h2 class="home-section-title">Did You Know?</h2>
+        </div>
+        <div class="home-section-body dyk-list">
+          {{{didYouKnow}}}
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Recent Updates -->
+    <div class="home-col-side">
+      <div class="home-section">
+        <div class="home-section-header">
+          <h2 class="home-section-title">Recently Updated</h2>
+          <span style="font-size:.72rem;color:var(--text-light)">{{lastUpdated}}</span>
+        </div>
+        <div class="home-section-body">
+          {{{recentUpdates}}}
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- MOC Navigation Grid -->
+  <div class="home-section home-section-full">
+    <div class="home-section-header">
+      <h2 class="home-section-title">Knowledge Maps</h2>
+      <a href="/browse/mocs" class="section-more-link">View all →</a>
+    </div>
+    <div class="home-section-body">
+      <div class="moc-grid">
+        {{{mocGrid}}}
+      </div>
+    </div>
+  </div>
+
+  <!-- Topic Portals -->
+  <div class="home-section home-section-full">
+    <div class="home-section-header">
+      <h2 class="home-section-title">Topic Areas</h2>
+    </div>
+    <div class="home-section-body">
+      <div class="portals-grid">
+        {{{portals}}}
+      </div>
+    </div>
+  </div>
+
+</div>

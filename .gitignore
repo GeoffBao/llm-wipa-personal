@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# Local configuration (contains personal vault paths)
+.env
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# Claude Code local settings
+.claude/
+
+# Playwright MCP session logs (may contain KB page content)
+.playwright-mcp/
+
+# Screenshots of personal KB content
+screenshot-*.png
+
+# Logs
+*.log
+npm-debug.log*

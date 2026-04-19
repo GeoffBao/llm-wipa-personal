@@ -1,0 +1,45 @@
+<div class="article-page">
+
+  <div class="article-breadcrumb">{{{breadcrumb}}}</div>
+
+  <div class="article-header">
+    <h1 class="article-title">{{title}}</h1>
+    <div class="article-subtitle-meta">
+      <span class="section-badge">{{sectionLabel}}</span>
+      {{updatedAt}}
+    </div>
+  </div>
+
+  <div class="article-layout">
+
+    <!-- Left: main content -->
+    <div class="article-body-col">
+      <div class="article-body">
+        {{{content}}}
+      </div>
+
+      <div class="article-footer">
+        <div class="article-tags">{{{tagBadges}}}</div>
+      </div>
+
+      <div class="backlinks-section">
+        <div class="backlinks-header">
+          <h3 class="backlinks-title">Pages that link here</h3>
+        </div>
+        <div class="backlinks-body">
+          {{{backlinks}}}
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: infobox + TOC -->
+    {{#if hasSide}}
+    <aside class="article-side-col">
+      {{{infobox}}}
+      {{{toc}}}
+    </aside>
+    {{/if}}
+
+  </div>
+
+</div>

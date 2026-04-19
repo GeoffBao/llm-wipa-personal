@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{pageTitle}}</title>
+  <link rel="icon" type="image/svg+xml" href="/public/favicon.svg">
+  <link rel="stylesheet" href="/public/css/main.css">
+  <style>
+    .canvas-page { max-width: none; }
+    .canvas-header { display:flex; align-items:baseline; gap:1rem; margin-bottom:1rem; flex-wrap:wrap; }
+    .canvas-meta { font-size:.8125rem; color:var(--text-muted); }
+
+    /* Viewport wrapper */
+    .canvas-viewport {
+      width: 100%;
+      height: calc(100vh - 160px);
+      min-height: 500px;
+      border: 1px solid var(--border-light);
+      border-radius: 4px;
+      background: #f0f2f5;
+      overflow: hidden;
+      position: relative;
+      cursor: grab;
+    }
+    .canvas-viewport.grabbing { cursor: grabbing; }
+
+    /* Transform layer */
+    .canvas-transform { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+
+    /* Inner canvas — absolute positioned nodes */
+    .canvas-inner { position: relative; }
+
+    /* SVG edges layer (behind nodes) */
+    .canvas-svg-edges { position: absolute; top: 0; left: 0; pointer-events: none; overflow: visible; }
+
+    /* Node base */
+    .cn {
+      position: absolute;
+      box-sizing: border-box;
+      border-radius: 6px;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    /* Text node */
+    .cn-text {
+      background: #fff;
+      border: 1.5px solid #d0d5dd;
+      padding: 10px 14px;
+      overflow: hidden;
+      word-break: break-word;
+    }
+    .cn-text.color-1 { background: #fef3c7; border-color: #f59e0b; }
+    .cn-text.color-2 { background: #fee2e2; border-color: #ef4444; }
+    .cn-text.color-3 { background: #dcfce7; border-color: #22c55e; }
+    .cn-text.color-4 { background: #dbeafe; border-color: #3b82f6; }
+    .cn-text.color-5 { background: #f5f3ff; border-color: #8b5cf6; }
+    .cn-text.color-6 { background: #fce7f3; border-color: #ec4899; }
+
+    /* File node */
+    .cn-file {
+      background: #fff;
+      border: 1.5px solid #0645ad;
+      padding: 8px 12px;
+      display: flex; flex-direction: column; justify-content: center;
+    }
+    .cn-file-title { font-weight: 600; color: #0645ad; font-size: 13px; text-decoration: none; }
+    .cn-file-title:hover { text-decoration: underline; }
+    .cn-file-path { font-size: 10px; color: #999; margin-top: 2px; }
+
+    /* Group node */
+    .cn-group {
+      border: 2px dashed #aab;
+      border-radius: 8px;
+      background: rgba(0,0,0,.03);
+    }
+    .cn-group-label {
+      position: absolute;
+      top: -22px; left: 8px;
+      font-size: 11px; font-weight: 700;
+      color: #555;
+      white-space: nowrap;
+    }
+    .cn-group.color-1 { border-color: #f59e0b; background: rgba(245,158,11,.04); }
+    .cn-group.color-2 { border-color: #ef4444; background: rgba(239,68,68,.04); }
+    .cn-group.color-3 { border-color: #22c55e; background: rgba(34,197,94,.04); }
+    .cn-group.color-4 { border-color: #3b82f6; background: rgba(59,130,246,.04); }
+    .cn-group.color-5 { border-color: #8b5cf6; background: rgba(139,92,246,.04); }
+    .cn-group.color-6 { border-color: #ec4899; background: rgba(236,72,153,.04); }
+
+    /* Controls */
+    .canvas-controls {
+      position: absolute; bottom: 12px; right: 12px; z-index: 10;
+      display: flex; gap: 4px;
+    }
+    .cc-btn {
+      width: 30px; height: 30px;
+      background: rgba(255,255,255,.9); border: 1px solid var(--border);
+      border-radius: 4px; cursor: pointer; font-size: .9rem;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text-muted);
+    }
+    .cc-btn:hover { background: #fff; color: var(--blue); border-color: var(--blue); }
+  </style>
+</head>
+<body>
+  <!-- Minimal header, no full sidebar layout -->
+  <header class="site-header">
+    <div class="header-inner">
+      <a href="/" class="site-logo">
+        <img src="/public/favicon.svg" class="logo-img" alt="LLM KB" width="28" height="28">
+        <span class="logo-text">LLM KB</span>
+        <span class="logo-byline">by Eason</span>
+      </a>
+      <nav class="header-nav" style="margin-left:auto">
+        <a href="/diagrams" class="nav-link">← Diagrams</a>
+        <a href="/graph" class="nav-link">Graph</a>
+        <a href="/" class="nav-link">Home</a>
+      </nav>
+    </div>
+  </header>
+
+  <div style="max-width:1400px;margin:0 auto;padding:1rem 1.5rem">
+    <div class="article-breadcrumb">{{{breadcrumb}}}</div>
+    <div class="canvas-header">
+      <h1 class="page-title">{{title}}</h1>
+      <span class="canvas-meta">{{nodeCount}} nodes · {{edgeCount}} edges</span>
+      <span class="canvas-meta" style="margin-left:auto">Scroll to zoom · Drag to pan</span>
+    </div>
+
+    <div class="canvas-viewport" id="canvas-viewport">
+      <div class="canvas-transform" id="canvas-transform">
+        <div class="canvas-inner" id="canvas-inner">
+          <svg class="canvas-svg-edges" id="canvas-svg"></svg>
+          <!-- nodes injected by JS -->
+        </div>
+      </div>
+      <div class="canvas-controls">
+        <button class="cc-btn" id="cc-fit" title="Fit view">⊡</button>
+        <button class="cc-btn" id="cc-plus" title="Zoom in">+</button>
+        <button class="cc-btn" id="cc-minus" title="Zoom out">−</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  (() => {
+    const CANVAS_DATA = {{{canvasData}}};
+    const { nodes, edges } = CANVAS_DATA;
+
+    // --- Coordinate transform ---
+    const xs = nodes.map(n => n.x);
+    const ys = nodes.map(n => n.y);
+    const ws = nodes.map(n => n.x + n.width);
+    const hs = nodes.map(n => n.y + n.height);
+    const minX = Math.min(...xs) - 40;
+    const minY = Math.min(...ys) - 40;
+    const totalW = Math.max(...ws) - minX + 40;
+    const totalH = Math.max(...hs) - minY + 40;
+
+    function tx(x) { return x - minX; }
+    function ty(y) { return y - minY; }
+
+    // Obsidian color index to CSS class
+    function colorClass(color) {
+      if (!color) return '';
+      const map = { '1': 'color-1', '2': 'color-2', '3': 'color-3', '4': 'color-4', '5': 'color-5', '6': 'color-6' };
+      return map[String(color)] || '';
+    }
+
+    const inner = document.getElementById('canvas-inner');
+    const svgEl = document.getElementById('canvas-svg');
+    inner.style.width = totalW + 'px';
+    inner.style.height = totalH + 'px';
+    svgEl.setAttribute('width', totalW);
+    svgEl.setAttribute('height', totalH);
+
+    // Node id → DOM element (for edge anchoring)
+    const nodeEls = {};
+
+    // Sort: groups first (background), then others
+    const sorted = [...nodes].sort((a, b) => {
+      if (a.type === 'group' && b.type !== 'group') return -1;
+      if (a.type !== 'group' && b.type === 'group') return 1;
+      return 0;
+    });
+
+    for (const node of sorted) {
+      const el = document.createElement('div');
+      el.dataset.id = node.id;
+      el.style.cssText = `left:${tx(node.x)}px;top:${ty(node.y)}px;width:${node.width}px;height:${node.height}px;`;
+      el.classList.add('cn');
+      const cc = colorClass(node.color);
+
+      if (node.type === 'group') {
+        el.classList.add('cn-group');
+        if (cc) el.classList.add(cc);
+        if (node.label) {
+          const lbl = document.createElement('div');
+          lbl.className = 'cn-group-label';
+          lbl.textContent = node.label;
+          el.appendChild(lbl);
+        }
+      } else if (node.type === 'file') {
+        el.classList.add('cn-file');
+        const link = document.createElement('a');
+        link.className = 'cn-file-title';
+        link.textContent = node.wikiTitle || node.file?.split('/').pop()?.replace('.md','') || 'File';
+        link.href = node.wikiSlug ? `/wiki/${node.wikiSlug}` : '#';
+        el.appendChild(link);
+        if (node.file) {
+          const path = document.createElement('div');
+          path.className = 'cn-file-path';
+          path.textContent = node.file;
+          el.appendChild(path);
+        }
+      } else if (node.type === 'text') {
+        el.classList.add('cn-text');
+        if (cc) el.classList.add(cc);
+        // Simple markdown: bold, italic, inline code
+        el.innerHTML = simpleMarkdown(node.text || '');
+      } else if (node.type === 'link') {
+        el.classList.add('cn-text');
+        if (cc) el.classList.add(cc);
+        el.innerHTML = node.url ? `<a href="${node.url}" target="_blank" rel="noopener" style="color:#0645ad;word-break:break-all">${node.url}</a>` : '';
+      }
+
+      inner.appendChild(el);
+      nodeEls[node.id] = el;
+    }
+
+    // Draw edges as SVG bezier curves
+    const nodeMap = Object.fromEntries(nodes.map(n => [n.id, n]));
+    const ns = 'http://www.w3.org/2000/svg';
+    const defs = document.createElementNS(ns, 'defs');
+    // Arrowhead marker
+    const marker = document.createElementNS(ns, 'marker');
+    marker.setAttribute('id', 'arrow');
+    marker.setAttribute('markerWidth', '8'); marker.setAttribute('markerHeight', '8');
+    marker.setAttribute('refX', '6'); marker.setAttribute('refY', '3');
+    marker.setAttribute('orient', 'auto');
+    const mPath = document.createElementNS(ns, 'path');
+    mPath.setAttribute('d', 'M0,0 L0,6 L8,3 z');
+    mPath.setAttribute('fill', '#888');
+    marker.appendChild(mPath);
+    defs.appendChild(marker);
+    svgEl.appendChild(defs);
+
+    for (const edge of edges) {
+      const src = nodeMap[edge.fromNode];
+      const tgt = nodeMap[edge.toNode];
+      if (!src || !tgt) continue;
+
+      const [x1, y1] = sidePoint(src, edge.fromSide);
+      const [x2, y2] = sidePoint(tgt, edge.toSide);
+      const [cx1, cy1, cx2, cy2] = controlPoints(x1, y1, x2, y2, edge.fromSide, edge.toSide);
+
+      const path = document.createElementNS(ns, 'path');
+      path.setAttribute('d', `M${x1},${y1} C${cx1},${cy1} ${cx2},${cy2} ${x2},${y2}`);
+      path.setAttribute('stroke', '#aab');
+      path.setAttribute('stroke-width', '1.5');
+      path.setAttribute('fill', 'none');
+      path.setAttribute('marker-end', edge.toEnd === 'arrow' || !edge.toEnd ? 'url(#arrow)' : 'none');
+
+      if (edge.label) {
+        const mx = (x1 + x2) / 2;
+        const my = (y1 + y2) / 2;
+        const text = document.createElementNS(ns, 'text');
+        text.setAttribute('x', mx); text.setAttribute('y', my - 4);
+        text.setAttribute('text-anchor', 'middle');
+        text.setAttribute('font-size', '10');
+        text.setAttribute('fill', '#666');
+        text.textContent = edge.label;
+        svgEl.appendChild(text);
+      }
+
+      svgEl.insertBefore(path, svgEl.firstChild);
+    }
+
+    function sidePoint(node, side) {
+      const x = tx(node.x), y = ty(node.y), w = node.width, h = node.height;
+      switch (side) {
+        case 'left':   return [x, y + h/2];
+        case 'right':  return [x + w, y + h/2];
+        case 'top':    return [x + w/2, y];
+        case 'bottom': return [x + w/2, y + h];
+        default:       return [x + w/2, y + h/2];
+      }
+    }
+
+    function controlPoints(x1, y1, x2, y2, fromSide, toSide) {
+      const d = Math.max(40, Math.min(Math.abs(x2-x1), Math.abs(y2-y1)) * 0.5);
+      const offset = (side) => {
+        switch (side) {
+          case 'left':   return [-d, 0];
+          case 'right':  return [d, 0];
+          case 'top':    return [0, -d];
+          case 'bottom': return [0, d];
+          default:       return [0, 0];
+        }
+      };
+      const [dx1, dy1] = offset(fromSide);
+      const [dx2, dy2] = offset(toSide);
+      return [x1+dx1, y1+dy1, x2+dx2, y2+dy2];
+    }
+
+    function simpleMarkdown(text) {
+      return text
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.+?)\*/g, '<em>$1</em>')
+        .replace(/`(.+?)`/g, '<code style="background:#eee;padding:0 3px;border-radius:2px;font-size:.9em">$1</code>')
+        .replace(/\n/g, '<br>');
+    }
+
+    // --- Pan & Zoom ---
+    const viewport = document.getElementById('canvas-viewport');
+    const transform = document.getElementById('canvas-transform');
+    let scale = 1, panX = 20, panY = 20;
+    let isDragging = false, startX = 0, startY = 0, startPanX = 0, startPanY = 0;
+
+    function applyTransform() {
+      transform.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
+    }
+    applyTransform();
+
+    // Fit to viewport
+    function fitView() {
+      const vw = viewport.clientWidth - 40;
+      const vh = viewport.clientHeight - 40;
+      scale = Math.min(vw / totalW, vh / totalH, 1);
+      panX = (viewport.clientWidth - totalW * scale) / 2;
+      panY = (viewport.clientHeight - totalH * scale) / 2;
+      applyTransform();
+    }
+    setTimeout(fitView, 50);
+
+    viewport.addEventListener('wheel', e => {
+      e.preventDefault();
+      const rect = viewport.getBoundingClientRect();
+      const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+      const delta = e.deltaY < 0 ? 1.12 : 0.89;
+      const newScale = Math.max(0.05, Math.min(8, scale * delta));
+      panX = mx - (mx - panX) * (newScale / scale);
+      panY = my - (my - panY) * (newScale / scale);
+      scale = newScale;
+      applyTransform();
+    }, { passive: false });
+
+    viewport.addEventListener('mousedown', e => {
+      if (e.target.tagName === 'A') return;
+      isDragging = true; viewport.classList.add('grabbing');
+      startX = e.clientX; startY = e.clientY; startPanX = panX; startPanY = panY;
+    });
+    window.addEventListener('mousemove', e => {
+      if (!isDragging) return;
+      panX = startPanX + (e.clientX - startX);
+      panY = startPanY + (e.clientY - startY);
+      applyTransform();
+    });
+    window.addEventListener('mouseup', () => {
+      isDragging = false; viewport.classList.remove('grabbing');
+    });
+
+    document.getElementById('cc-fit').addEventListener('click', fitView);
+    document.getElementById('cc-plus').addEventListener('click', () => {
+      const cx = viewport.clientWidth/2, cy = viewport.clientHeight/2;
+      const newScale = Math.min(8, scale * 1.3);
+      panX = cx - (cx - panX) * (newScale/scale);
+      panY = cy - (cy - panY) * (newScale/scale);
+      scale = newScale; applyTransform();
+    });
+    document.getElementById('cc-minus').addEventListener('click', () => {
+      const cx = viewport.clientWidth/2, cy = viewport.clientHeight/2;
+      const newScale = Math.max(0.05, scale * 0.77);
+      panX = cx - (cx - panX) * (newScale/scale);
+      panY = cy - (cy - panY) * (newScale/scale);
+      scale = newScale; applyTransform();
+    });
+  })();
+  </script>
+</body>
+</html>

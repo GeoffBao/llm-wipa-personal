@@ -1,0 +1,22 @@
+{
+  "name": "llm-wipa",
+  "version": "1.0.0",
+  "description": "Obsidian knowledge base served as a Wikipedia-inspired local web app",
+  "type": "module",
+  "scripts": {
+    "start": "node --env-file=.env server.js",
+    "dev": "node --env-file=.env --watch server.js"
+  },
+  "dependencies": {
+    "chokidar": "^4.0.3",
+    "d3": "^7.9.0",
+    "express": "^4.21.2",
+    "glob": "^11.0.0",
+    "highlight.js": "^11.11.1",
+    "js-yaml": "^4.1.0",
+    "marked": "^15.0.0",
+    "marked-highlight": "^2.2.1",
+    "mermaid": "^11.14.0",
+    "minisearch": "^7.1.2"
+  }
+}

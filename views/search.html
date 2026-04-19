@@ -1,0 +1,22 @@
+<div class="search-page">
+  <div class="search-page-header">
+    <h1 class="page-title">Search</h1>
+  </div>
+
+  <form class="search-page-form" action="/search" method="get">
+    <div class="search-page-input-wrap">
+      <input type="search" name="q" value="{{query}}" placeholder="Search concepts, sources, maps…" class="search-page-input" autofocus>
+      <button type="submit" class="search-page-btn">Search</button>
+    </div>
+  </form>
+
+  <div class="search-results-meta">
+    {{#if query}}
+      <strong>{{resultCount}}</strong> result{{resultCount === 1 ? '' : 's'}} for "<strong>{{query}}</strong>"
+    {{/if}}
+  </div>
+
+  <div class="search-results">
+    {{{results}}}
+  </div>
+</div>

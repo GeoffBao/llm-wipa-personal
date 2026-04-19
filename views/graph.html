@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{pageTitle}}</title>
+  <link rel="icon" type="image/svg+xml" href="/public/favicon.svg">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #1a1b26; color: #c0caf5; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+
+    /* Top bar */
+    .graph-topbar {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      height: 48px;
+      background: rgba(26, 27, 38, 0.92);
+      border-bottom: 1px solid #2a2b3d;
+      backdrop-filter: blur(8px);
+      display: flex; align-items: center; gap: 12px; padding: 0 16px;
+    }
+    .graph-back {
+      color: #7aa2f7; text-decoration: none; font-size: .85rem;
+      display: flex; align-items: center; gap: 4px; flex-shrink: 0;
+    }
+    .graph-back:hover { color: #c0caf5; }
+    .graph-title { font-size: .9rem; font-weight: 700; color: #c0caf5; flex-shrink: 0; }
+    .graph-stats { font-size: .78rem; color: #565f89; }
+
+    /* Search box */
+    .graph-search {
+      margin-left: auto;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .graph-search input {
+      background: #24283b; border: 1px solid #414868; border-radius: 4px;
+      color: #c0caf5; padding: 5px 10px; font-size: .83rem; width: 200px; outline: none;
+    }
+    .graph-search input::placeholder { color: #565f89; }
+    .graph-search input:focus { border-color: #7aa2f7; }
+
+    /* Legend */
+    .graph-legend {
+      position: fixed; bottom: 16px; left: 16px; z-index: 100;
+      background: rgba(26, 27, 38, 0.9); border: 1px solid #2a2b3d;
+      border-radius: 6px; padding: 10px 14px;
+      display: flex; flex-direction: column; gap: 5px;
+      font-size: .75rem;
+    }
+    .legend-row { display: flex; align-items: center; gap: 6px; }
+    .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .legend-label { color: #a9b1d6; }
+
+    /* Controls */
+    .graph-controls {
+      position: fixed; bottom: 16px; right: 16px; z-index: 100;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .ctrl-btn {
+      width: 32px; height: 32px;
+      background: rgba(26,27,38,.9); border: 1px solid #2a2b3d;
+      border-radius: 4px; color: #a9b1d6; font-size: 1rem; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .ctrl-btn:hover { background: #24283b; color: #7aa2f7; }
+
+    /* Tooltip */
+    .node-tooltip {
+      position: fixed; z-index: 200;
+      background: rgba(26,27,38,.95); border: 1px solid #414868;
+      border-radius: 4px; padding: 6px 10px;
+      font-size: .8rem; color: #c0caf5; pointer-events: none;
+      max-width: 220px; line-height: 1.4;
+    }
+    .tooltip-section { font-size: .7rem; color: #565f89; margin-top: 2px; }
+
+    /* SVG canvas */
+    svg { width: 100%; height: 100%; display: block; }
+    .link { stroke: #2a2b3d; stroke-width: 1; opacity: .6; }
+    .link.highlighted { stroke: #7aa2f7; stroke-width: 1.5; opacity: 1; }
+    .node circle { cursor: pointer; stroke: rgba(0,0,0,.3); stroke-width: 1; }
+    .node circle:hover { stroke: #fff; stroke-width: 1.5; }
+    .node.dimmed circle { opacity: .15; }
+    .node.dimmed text { opacity: 0; }
+    .link.dimmed { opacity: .05; }
+    .node-label { fill: #a9b1d6; font-size: 9px; pointer-events: none; text-anchor: middle; }
+    .node.highlighted .node-label { fill: #fff; font-size: 10px; }
+    #graph-svg { margin-top: 48px; height: calc(100vh - 48px); }
+  </style>
+</head>
+<body>
+  <div class="graph-topbar">
+    <a href="/" class="graph-back">← LLM KB</a>
+    <span class="graph-title">Knowledge Graph</span>
+    <span class="graph-stats" id="graph-stats">Loading…</span>
+    <div class="graph-search">
+      <input type="search" id="graph-search-input" placeholder="Search nodes…" autocomplete="off">
+    </div>
+  </div>
+
+  <svg id="graph-svg">
+    <g id="graph-root">
+      <g id="links-layer"></g>
+      <g id="nodes-layer"></g>
+    </g>
+  </svg>
+
+  <div class="graph-legend" id="graph-legend"></div>
+
+  <div class="graph-controls">
+    <button class="ctrl-btn" id="btn-fit" title="Fit view">⊡</button>
+    <button class="ctrl-btn" id="btn-plus" title="Zoom in">+</button>
+    <button class="ctrl-btn" id="btn-minus" title="Zoom out">−</button>
+  </div>
+
+  <div class="node-tooltip" id="node-tooltip" style="display:none"></div>
+
+  <script src="/public/vendor/d3.min.js"></script>
+  <script>
+  (async () => {
+    const sectionLabels = {
+      concepts: 'Concept', sources: 'Source', mocs: 'Map',
+      synthesis: 'Synthesis', prompts: 'Prompt', notes: 'Note',
+      projects: 'Project', wiki: 'Other',
+    };
+
+    const data = await fetch('/api/graph').then(r => r.json());
+    const { nodes, links, sections } = data;
+
+    // Legend
+    const legend = document.getElementById('graph-legend');
+    sections.forEach(({ section, color }) => {
+      const row = document.createElement('div');
+      row.className = 'legend-row';
+      row.innerHTML = `<div class="legend-dot" style="background:${color}"></div><span class="legend-label">${sectionLabels[section] || section}</span>`;
+      legend.appendChild(row);
+    });
+
+    document.getElementById('graph-stats').textContent =
+      `${nodes.length} nodes · ${links.length} links`;
+
+    const svgEl = document.getElementById('graph-svg');
+    const W = svgEl.clientWidth, H = svgEl.clientHeight;
+    const svg = d3.select('#graph-svg');
+    const g = d3.select('#graph-root');
+
+    // Zoom behavior
+    const zoom = d3.zoom()
+      .scaleExtent([0.05, 8])
+      .on('zoom', e => g.attr('transform', e.transform));
+    svg.call(zoom);
+
+    // Node radius: min 3, max 14, based on backlinks
+    const maxBL = d3.max(nodes, d => d.backlinks) || 1;
+    const rScale = d3.scaleSqrt().domain([0, maxBL]).range([3, 14]);
+
+    // Simulation
+    const simulation = d3.forceSimulation(nodes)
+      .force('link', d3.forceLink(links).id(d => d.id).distance(60).strength(0.3))
+      .force('charge', d3.forceManyBody().strength(-120))
+      .force('center', d3.forceCenter(W / 2, H / 2))
+      .force('collision', d3.forceCollide(d => rScale(d.backlinks) + 3));
+
+    // Draw links
+    const link = d3.select('#links-layer')
+      .selectAll('line')
+      .data(links)
+      .join('line')
+      .attr('class', 'link');
+
+    // Draw nodes
+    const node = d3.select('#nodes-layer')
+      .selectAll('g')
+      .data(nodes)
+      .join('g')
+      .attr('class', 'node')
+      .call(d3.drag()
+        .on('start', (e, d) => { if (!e.active) simulation.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; })
+        .on('drag', (e, d) => { d.fx = e.x; d.fy = e.y; })
+        .on('end', (e, d) => { if (!e.active) simulation.alphaTarget(0); d.fx = null; d.fy = null; })
+      );
+
+    node.append('circle')
+      .attr('r', d => rScale(d.backlinks))
+      .attr('fill', d => d.color);
+
+    node.append('text')
+      .attr('class', 'node-label')
+      .attr('dy', d => rScale(d.backlinks) + 10)
+      .text(d => d.title.length > 14 ? d.title.slice(0, 13) + '…' : d.title);
+
+    // Tooltip
+    const tooltip = document.getElementById('node-tooltip');
+    node
+      .on('mouseenter', (e, d) => {
+        tooltip.style.display = 'block';
+        tooltip.innerHTML = `<div>${d.title}</div><div class="tooltip-section">${sectionLabels[d.section] || d.section} · ${d.backlinks} backlinks</div>`;
+      })
+      .on('mousemove', (e) => {
+        tooltip.style.left = (e.clientX + 12) + 'px';
+        tooltip.style.top = (e.clientY - 8) + 'px';
+      })
+      .on('mouseleave', () => { tooltip.style.display = 'none'; })
+      .on('click', (e, d) => { window.location.href = '/wiki/' + d.id; });
+
+    // Tick
+    simulation.on('tick', () => {
+      link
+        .attr('x1', d => d.source.x).attr('y1', d => d.source.y)
+        .attr('x2', d => d.target.x).attr('y2', d => d.target.y);
+      node.attr('transform', d => `translate(${d.x},${d.y})`);
+    });
+
+    // Fit view after simulation settles
+    simulation.on('end', fitView);
+    setTimeout(fitView, 2500);
+
+    function fitView() {
+      const bounds = g.node().getBBox();
+      if (!bounds.width) return;
+      const padding = 40;
+      const scaleX = (W - padding * 2) / bounds.width;
+      const scaleY = (H - padding * 2) / bounds.height;
+      const scale = Math.min(scaleX, scaleY, 1);
+      const tx = (W - bounds.width * scale) / 2 - bounds.x * scale;
+      const ty = (H - bounds.height * scale) / 2 - bounds.y * scale;
+      svg.transition().duration(600)
+        .call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(scale));
+    }
+
+    // Search
+    const searchInput = document.getElementById('graph-search-input');
+    searchInput.addEventListener('input', () => {
+      const q = searchInput.value.trim().toLowerCase();
+      if (!q) {
+        node.classed('dimmed', false).classed('highlighted', false);
+        link.classed('dimmed', false).classed('highlighted', false);
+        return;
+      }
+      const matchSlugs = new Set(
+        nodes.filter(d => d.title.toLowerCase().includes(q) || d.id.includes(q)).map(d => d.id)
+      );
+      node.classed('dimmed', d => !matchSlugs.has(d.id))
+          .classed('highlighted', d => matchSlugs.has(d.id));
+      link.classed('dimmed', d => !matchSlugs.has(d.source.id) && !matchSlugs.has(d.target.id))
+          .classed('highlighted', d => matchSlugs.has(d.source.id) || matchSlugs.has(d.target.id));
+    });
+
+    // Controls
+    document.getElementById('btn-fit').addEventListener('click', fitView);
+    document.getElementById('btn-plus').addEventListener('click', () => {
+      svg.transition().duration(200).call(zoom.scaleBy, 1.5);
+    });
+    document.getElementById('btn-minus').addEventListener('click', () => {
+      svg.transition().duration(200).call(zoom.scaleBy, 0.67);
+    });
+  })();
+  </script>
+</body>
+</html>
