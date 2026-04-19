@@ -14,7 +14,7 @@ router.get('/excalidraw', async (req, res) => {
   const cardsHtml = drawings.map(d => `
     <div class="ex-gallery-card">
       <a href="/excalidraw/${d.slug}" class="ex-gallery-preview">
-        <div class="ex-gallery-icon">✏️</div>
+        <div class="ex-gallery-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:32px;height:32px;opacity:.6"><path d="m12 19 7-7 3 3-7 7-3-3z"/><path d="m18 13-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="m2 2 7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg></div>
         <div class="ex-gallery-title">${d.title}</div>
         <div class="ex-gallery-meta">${d.elementCount} elements</div>
       </a>
