@@ -10,6 +10,24 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300..700;1,14..32,300..700&family=JetBrains+Mono:wght@400;500&display=swap">
   <link rel="stylesheet" href="/public/css/main.css">
   <link rel="stylesheet" href="/public/css/hljs.css">
+  <link rel="stylesheet" href="/public/css/dark.css">
+  <link rel="stylesheet" href="/public/css/palette.css">
+  <link rel="stylesheet" href="/public/css/right-pane.css">
+  <script>
+    // Theme bootstrap — runs before paint to avoid flash
+    (function () {
+      try {
+        var t = localStorage.getItem('wipa-theme');
+        if (t === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+      } catch (e) {}
+      window.__toggleTheme = function () {
+        var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        if (next === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+        else document.documentElement.removeAttribute('data-theme');
+        try { localStorage.setItem('wipa-theme', next); } catch (e) {}
+      };
+    })();
+  </script>
 </head>
 <body>
   <header class="site-header">
@@ -35,8 +53,13 @@
             </svg>
           </button>
           <div class="search-autocomplete" id="search-autocomplete" hidden></div>
+          <span class="palette-trigger-kbd" aria-hidden="true">⌘K</span>
         </div>
       </form>
+      <button class="theme-toggle" id="theme-toggle" aria-label="Toggle dark mode" title="Toggle theme (⌘K → Toggle Dark / Light Mode)">
+        <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+        <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
       <nav class="header-nav">
         <a href="/" class="nav-link">Home</a>
         <a href="/browse/concepts" class="nav-link">Concepts</a>
@@ -116,6 +139,9 @@
   <script src="/public/js/search.js" defer></script>
   <script src="/public/js/toc-highlight.js" defer></script>
   <script src="/public/js/mobile-nav.js" defer></script>
+  <script src="/public/js/palette.js" defer></script>
+  <script src="/public/vendor/d3.min.js" defer></script>
+  <script src="/public/js/right-pane.js" defer></script>
   <script src="/public/vendor/mermaid.min.js" defer></script>
   <script>
     document.getElementById('random-link')?.addEventListener('click', async (e) => {
@@ -123,8 +149,12 @@
       const r = await fetch('/api/random').then(r => r.json());
       if (r.slug) window.location.href = '/wiki/' + r.slug;
     });
+    document.getElementById('theme-toggle')?.addEventListener('click', () => window.__toggleTheme?.());
     window.addEventListener('load', () => {
-      if (window.mermaid) mermaid.initialize({ startOnLoad: true, theme: 'default' });
+      if (window.mermaid) {
+        const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+        mermaid.initialize({ startOnLoad: true, theme: dark ? 'dark' : 'default' });
+      }
     });
   </script>
 </body>

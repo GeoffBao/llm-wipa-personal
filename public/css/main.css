@@ -21,9 +21,18 @@
   --sidebar-width: 230px;
   --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
   --font-mono: "JetBrains Mono", "SF Mono", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  --indigo: #5b6cff;
+  --indigo-soft: #d1d7fe;
   --radius: 10px;
   --radius-sm: 8px;
   --radius-xs: 5px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
   --shadow-sm: 0 1px 3px rgba(120,80,20,0.06), 0 2px 8px rgba(120,80,20,0.05);
   --shadow-md: 0 4px 16px rgba(120,80,20,0.1), 0 2px 4px rgba(120,80,20,0.04);
   --shadow-lg: 0 8px 32px rgba(120,80,20,0.14), 0 2px 8px rgba(120,80,20,0.07);
