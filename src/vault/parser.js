@@ -18,7 +18,8 @@ export function parseFile(rawContent) {
   }
 
   // Try inline blockquote metadata block
-  // Pattern: after optional H1, one or more "> Key: Value" lines
+  // Pattern: optional H1, then one or more "> Key: Value" lines
+  // Also handles files where blockquote meta starts at the top with no H1
   const lines = rawContent.split('\n');
   let title = null;
   let metaStartIdx = -1;
@@ -26,28 +27,24 @@ export function parseFile(rawContent) {
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    // Skip blank lines before H1
+
     if (!title && line.startsWith('# ')) {
       title = line.slice(2).trim();
       continue;
     }
-    if (!title) continue; // Haven't seen H1 yet
 
-    // Blank line after title — look for meta block next
+    // Allow blockquote meta at top of file even without H1
     if (line.trim() === '' && metaStartIdx === -1) continue;
 
-    // Start of meta block
     if (line.startsWith('> ') && metaStartIdx === -1) {
       metaStartIdx = i;
     }
 
-    // Continue meta block
     if (metaStartIdx !== -1 && line.startsWith('> ')) {
       metaEndIdx = i;
       continue;
     }
 
-    // End of meta block
     if (metaStartIdx !== -1 && !line.startsWith('> ')) {
       break;
     }
@@ -73,7 +70,9 @@ export function parseFile(rawContent) {
   }
   const body = lines.slice(bodyStartIdx).join('\n');
 
-  return { meta: normalizeMeta(meta), body, title: title || 'Untitled' };
+  // Fall back to meta fields for title (e.g. "Full Name:" used by wiki-ingest sources)
+  const derivedTitle = title || meta['full name'] || meta['title'] || null;
+  return { meta: normalizeMeta(meta), body, title: derivedTitle || 'Untitled' };
 }
 
 function extractTitle(text) {
