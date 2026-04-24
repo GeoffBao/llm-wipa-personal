@@ -44,7 +44,7 @@ router.get('/reading/:slug', async (req, res) => {
   const book = getBook('reading-' + req.params.slug) || getBook(req.params.slug);
   if (!book) return res.status(404).send('Not found');
 
-  const html = renderMarkdown(book.body);
+  const html = renderMarkdown(book.body, book.filepath);
   res.send(await render('article.html', {
     pageTitle: `${book.title} — LLM KB`,
     title: book.title,

@@ -30,6 +30,7 @@ app.use(express.json({ limit: '10mb' }));
 // Static files
 app.use('/public', express.static(join(__dirname, 'public')));
 app.use('/assets', express.static(join(VAULT_PATH, 'Assets')));
+app.use('/vault', express.static(VAULT_PATH));
 
 // Routes
 app.use(homeRouter);

@@ -23,7 +23,7 @@ router.get('/wiki/:slug', async (req, res) => {
     }));
   }
 
-  const html = renderMarkdown(file.body);
+  const html = renderMarkdown(file.body, file.filepath);
   const toc = extractTOC(html);
   const tocHtml = renderTOC(toc);
   const backlinks = getBacklinks(file.title);
