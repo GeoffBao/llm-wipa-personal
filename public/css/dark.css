@@ -1,0 +1,135 @@
+/* =========================================================
+   Dark mode — Surf-inspired deep navy with periwinkle accent.
+   Activated by <html data-theme="dark">.
+   Warm cream default stays untouched unless this is set.
+   ========================================================= */
+
+html[data-theme="dark"] {
+  --bg:            #0f1014;
+  --bg-card:       #161822;
+  --bg-hover:      #1d202c;
+  --border:        #2a2d3a;
+  --border-light:  rgba(209,215,254,0.10);
+  --text:          #e6e7ec;
+  --text-muted:    #a4a7b4;
+  --text-light:    #6b6e7d;
+  --heading-color: #f4f5f9;
+  --header-bg:     rgba(15,16,20,0.82);
+  --header-border: rgba(209,215,254,0.08);
+
+  /* Periwinkle accent replaces amber/blue in dark surfaces */
+  --blue:         #b8c0ff;
+  --blue-hover:   #d1d7fe;
+  --blue-light:   rgba(184,192,255,0.10);
+  --blue-visited: #c7a9ff;
+  --red-missing:  #ff8a8a;
+  --green:        #66d9a0;
+
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.3), 0 2px 8px rgba(0,0,0,0.25);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.4), 0 2px 4px rgba(0,0,0,0.25);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.3);
+}
+
+/* Main content background: near-black card, not pure white */
+html[data-theme="dark"] .main-content { background: #12141b; }
+
+/* Header glass */
+html[data-theme="dark"] .site-header { backdrop-filter: saturate(160%) blur(22px); }
+
+/* Inputs pick up the panel surface */
+html[data-theme="dark"] .search-wrap input[type="search"],
+html[data-theme="dark"] .search-page-input {
+  background: rgba(22,24,34,0.75);
+  color: var(--text);
+  border-color: var(--border);
+}
+html[data-theme="dark"] .search-wrap input::placeholder,
+html[data-theme="dark"] .search-page-input::placeholder { color: var(--text-light); }
+html[data-theme="dark"] .search-wrap input:focus,
+html[data-theme="dark"] .search-page-input:focus {
+  background: #1a1d28;
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(184,192,255,0.18);
+}
+
+/* Sidebar */
+html[data-theme="dark"] .sidebar { background: var(--bg); border-right-color: var(--border-light); }
+html[data-theme="dark"] .sidebar-link:hover { background: rgba(255,255,255,0.03); }
+html[data-theme="dark"] .sidebar-link.active { background: var(--blue-light); color: var(--blue); }
+
+/* Cards, sections, infobox, TOC */
+html[data-theme="dark"] .home-section,
+html[data-theme="dark"] .moc-card,
+html[data-theme="dark"] .portal-card,
+html[data-theme="dark"] .canvas-gallery-card,
+html[data-theme="dark"] .ex-gallery-card,
+html[data-theme="dark"] .book-card,
+html[data-theme="dark"] .featured-concept {
+  background: var(--bg-card);
+  border-color: var(--border-light);
+}
+html[data-theme="dark"] .featured-concept { background: linear-gradient(160deg, #181a24 0%, #13151c 60%); }
+html[data-theme="dark"] .home-section-header,
+html[data-theme="dark"] .article-infobox,
+html[data-theme="dark"] .toc { background: #141621; }
+
+/* INDEX hero — slightly less saturated in dark, keeps amber identity */
+html[data-theme="dark"] .index-hero {
+  background: linear-gradient(135deg, #3a1d08 0%, #5a2f0c 50%, #7a4214 100%);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.35);
+}
+html[data-theme="dark"] .index-hero-btn {
+  background: var(--blue);
+  color: #0f1014;
+  box-shadow: 0 2px 8px rgba(184,192,255,0.25);
+}
+html[data-theme="dark"] .index-hero-btn:hover { background: var(--blue-hover); color: #0f1014; }
+
+/* Article code blocks */
+html[data-theme="dark"] .article-body pre { background: #0a0b0f; box-shadow: none; border: 1px solid var(--border-light); }
+html[data-theme="dark"] .article-body code {
+  background: rgba(184,192,255,0.08);
+  border-color: transparent;
+  color: #e8b4d4;
+}
+html[data-theme="dark"] .article-body blockquote { background: rgba(255,255,255,0.02); border-left-color: var(--border); }
+html[data-theme="dark"] .article-body tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
+
+/* Tags */
+html[data-theme="dark"] .tag {
+  background: rgba(184,192,255,0.06);
+  border-color: rgba(184,192,255,0.18);
+  color: var(--text-muted);
+}
+html[data-theme="dark"] .tag:hover { background: var(--blue-light); color: var(--blue); border-color: var(--blue); }
+
+/* Footer */
+html[data-theme="dark"] .site-footer { background: var(--bg); border-top-color: var(--border-light); }
+
+/* Readwise badges stay legible */
+html[data-theme="dark"] .rw-cat-article { background: rgba(184,192,255,0.12); color: var(--blue); }
+html[data-theme="dark"] .rw-cat-rss     { background: rgba(234,179,8,0.16);  color: #f0c94a; }
+html[data-theme="dark"] .rw-cat-tweet   { background: rgba(56,189,248,0.14); color: #7dd3fc; }
+html[data-theme="dark"] .rw-cat-email   { background: rgba(34,197,94,0.14);  color: #86efac; }
+html[data-theme="dark"] .rw-cat-epub    { background: rgba(167,139,250,0.16);color: #c4b5fd; }
+html[data-theme="dark"] .rw-cat-pdf     { background: rgba(248,113,113,0.14);color: #fca5a5; }
+
+/* Graph / canvas full-screen pages usually carry their own inline bg;
+   give them a dark wash if they inherit from body. */
+html[data-theme="dark"] body { color-scheme: dark; }
+
+/* Theme toggle button */
+.theme-toggle {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; margin-left: 4px;
+  background: transparent; border: 1px solid transparent;
+  border-radius: 8px; cursor: pointer;
+  color: var(--text-muted);
+  transition: background 0.12s var(--ease), color 0.12s var(--ease), border-color 0.12s var(--ease);
+}
+.theme-toggle:hover { background: rgba(0,0,0,0.05); color: var(--text); border-color: var(--border-light); }
+html[data-theme="dark"] .theme-toggle:hover { background: rgba(255,255,255,0.04); }
+.theme-toggle svg { width: 16px; height: 16px; }
+.theme-toggle .moon { display: none; }
+html[data-theme="dark"] .theme-toggle .sun  { display: none; }
+html[data-theme="dark"] .theme-toggle .moon { display: block; }

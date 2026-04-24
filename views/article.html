@@ -1,4 +1,4 @@
-<div class="article-page">
+<div class="article-page" data-slug="{{slug}}">
 
   <div class="article-breadcrumb">{{{breadcrumb}}}</div>
 
@@ -21,24 +21,55 @@
       <div class="article-footer">
         <div class="article-tags">{{{tagBadges}}}</div>
       </div>
-
-      <div class="backlinks-section">
-        <div class="backlinks-header">
-          <h3 class="backlinks-title">Pages that link here</h3>
-        </div>
-        <div class="backlinks-body">
-          {{{backlinks}}}
-        </div>
-      </div>
     </div>
 
-    <!-- Right: infobox + TOC -->
-    {{#if hasSide}}
-    <aside class="article-side-col">
-      {{{infobox}}}
-      {{{toc}}}
+    <!-- Right: tabbed pane (Outline · Backlinks · Local Graph) -->
+    <aside class="article-side-col" id="right-pane" aria-label="Article tools">
+      {{#if infobox}}
+      <div class="pane-infobox">
+        {{{infobox}}}
+      </div>
+      {{/if}}
+
+      <div class="pane-tabs" role="tablist">
+        {{#if hasToc}}
+        <button class="pane-tab" role="tab" data-tab="outline" aria-selected="true">
+          <svg class="pane-tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg>
+          Outline
+        </button>
+        {{/if}}
+        <button class="pane-tab" role="tab" data-tab="backlinks" aria-selected="false">
+          <svg class="pane-tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          Backlinks
+          {{#if hasBacklinks}}<span class="pane-tab-count">{{backlinksCount}}</span>{{/if}}
+        </button>
+        <button class="pane-tab" role="tab" data-tab="graph" aria-selected="false">
+          <svg class="pane-tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+          Graph
+        </button>
+      </div>
+
+      <div class="pane-body">
+        {{#if hasToc}}
+        <div class="pane-panel" data-panel="outline">
+          {{{toc}}}
+        </div>
+        {{/if}}
+        <div class="pane-panel" data-panel="backlinks" hidden>
+          {{#if hasBacklinks}}
+            {{{backlinks}}}
+          {{else}}
+            <div class="pane-empty">No pages link here yet.</div>
+          {{/if}}
+        </div>
+        <div class="pane-panel" data-panel="graph" hidden>
+          <div class="pane-graph" id="pane-graph">
+            <div class="pane-graph-loading">Loading graph…</div>
+          </div>
+          <div class="pane-graph-legend" id="pane-graph-legend"></div>
+        </div>
+      </div>
     </aside>
-    {{/if}}
 
   </div>
 

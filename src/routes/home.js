@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { getAllFiles, getFilesBySection, getAllBooks } from '../vault/loader.js';
+import { getBacklinks } from '../vault/backlinks.js';
 import { renderMarkdown } from '../render/markdown.js';
 import { render } from '../render/template.js';
 import { DOMAIN_PORTALS } from '../../config.js';
@@ -17,11 +18,13 @@ router.get('/', async (req, res) => {
   const mocGrid = renderMocGrid(mocs);
   const portals = renderPortals(allFiles);
   const stats = getStats(allFiles);
+  const orphans = getOrphans(allFiles, 5);
 
   const featuredHtml = featured ? renderFeatured(featured) : '';
   const recentHtml = renderRecent(recentUpdates);
   const dykHtml = renderDYK(didYouKnow);
   const indexNav = renderIndexNav(allFiles);
+  const orphanNudge = orphans.length ? renderOrphanNudge(orphans) : '';
 
   res.send(await render('home.html', {
     pageTitle: "LLM KB — Eason's Knowledge Base",
@@ -31,6 +34,7 @@ router.get('/', async (req, res) => {
     mocGrid,
     portals,
     indexNav,
+    orphanNudge,
     totalFiles: stats.total,
     totalConcepts: stats.concepts,
     totalSources: stats.sources,
@@ -212,6 +216,29 @@ function renderIndexNav(allFiles) {
         <ul class="domain-links">${links}</ul>
       </div>`;
   }).join('');
+}
+
+function getOrphans(files, n) {
+  const skipSections = new Set(['prompts', 'people', 'mocs']);
+  return files
+    .filter(f => !skipSections.has(f.section) && getBacklinks(f.title).length === 0 && f.body.length > 50)
+    .sort((a, b) => b.mtime - a.mtime)
+    .slice(0, n);
+}
+
+function renderOrphanNudge(files) {
+  const sectionLabel = { concepts: 'Concept', sources: 'Source', synthesis: 'Synthesis', notes: 'Note' };
+  const items = files.map(f =>
+    `<div class="orphan-item">
+      <span class="orphan-dot"></span>
+      <a href="/wiki/${f.slug}">${f.title}</a>
+      <span class="orphan-section">${sectionLabel[f.section] || f.section}</span>
+    </div>`
+  ).join('');
+  return `<div class="orphan-nudge">
+    <div class="orphan-nudge-title">No incoming links</div>
+    ${items}
+  </div>`;
 }
 
 function getStats(files) {

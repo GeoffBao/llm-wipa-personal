@@ -1,0 +1,167 @@
+/* =========================================================
+   Article right pane — tabbed Outline / Backlinks / Graph.
+   Replaces the old static TOC + bottom backlinks layout.
+   ========================================================= */
+
+.article-layout { grid-template-columns: 1fr 284px !important; }
+
+@media (max-width: 1100px) { .article-layout { grid-template-columns: 1fr 244px !important; } }
+@media (max-width: 768px)  { .article-layout { grid-template-columns: 1fr !important; } }
+
+.article-side-col {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Infobox above tabs */
+.pane-infobox { flex-shrink: 0; }
+
+/* Tab strip — minimal Surf-style pill tabs */
+.pane-tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  background: var(--bg);
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+.pane-tab {
+  flex: 1;
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: 5px;
+  padding: 6px 4px;
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  border-radius: 7px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.14s var(--ease), color 0.14s var(--ease);
+}
+.pane-tab:hover { color: var(--text); background: rgba(0,0,0,0.03); }
+html[data-theme="dark"] .pane-tab:hover { background: rgba(255,255,255,0.03); }
+.pane-tab[aria-selected="true"] {
+  background: var(--bg-card);
+  color: var(--text);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.06);
+  font-weight: 600;
+}
+html[data-theme="dark"] .pane-tab[aria-selected="true"] {
+  background: #1d2030;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+.pane-tab-icon { width: 13px; height: 13px; flex-shrink: 0; opacity: 0.75; }
+.pane-tab[aria-selected="true"] .pane-tab-icon { opacity: 1; }
+.pane-tab-count {
+  font-family: var(--font-mono); font-size: 0.64rem; font-weight: 600;
+  background: rgba(0,0,0,0.06); color: var(--text-muted);
+  border-radius: 999px;
+  padding: 1px 6px;
+  margin-left: 1px;
+  line-height: 1.2;
+}
+.pane-tab[aria-selected="true"] .pane-tab-count {
+  background: var(--blue-light); color: var(--blue);
+}
+html[data-theme="dark"] .pane-tab-count { background: rgba(255,255,255,0.06); }
+
+/* Panel body */
+.pane-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-light) transparent;
+}
+.pane-body::-webkit-scrollbar { width: 4px; }
+.pane-body::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 2px; }
+
+.pane-panel[hidden] { display: none; }
+
+/* Outline panel — reuse existing TOC styles, drop outer box */
+.pane-panel .toc {
+  background: transparent;
+  border: none;
+  padding: 6px 2px;
+}
+.pane-panel .toc-title { display: none; } /* tab label is already the title */
+
+/* Backlinks panel — single column, no border noise */
+.pane-panel .backlinks-list {
+  list-style: none;
+  padding: 6px 2px;
+  margin: 0;
+  columns: 1;
+  font-size: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.pane-panel .backlinks-list li {
+  margin: 0;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: background 0.1s;
+}
+.pane-panel .backlinks-list li:hover { background: var(--bg-hover); }
+.pane-panel .backlinks-list a { color: var(--text); text-decoration: none; }
+.pane-panel .backlinks-list a:hover { color: var(--blue); }
+.pane-panel .backlinks-more { padding: 4px 8px; color: var(--text-light); font-style: italic; font-size: 0.78rem; }
+
+.pane-empty {
+  padding: 14px 8px;
+  color: var(--text-light);
+  font-size: 0.82rem;
+  font-style: italic;
+  text-align: center;
+}
+
+/* Local graph panel */
+.pane-graph {
+  width: 100%;
+  aspect-ratio: 1/1;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  background: var(--bg);
+  overflow: hidden;
+  position: relative;
+}
+html[data-theme="dark"] .pane-graph { background: #0a0b10; }
+.pane-graph svg { width: 100%; height: 100%; display: block; cursor: grab; }
+.pane-graph svg:active { cursor: grabbing; }
+.pane-graph-loading {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.8rem; color: var(--text-light);
+}
+.pane-graph-node-center { stroke: var(--blue); stroke-width: 2; }
+.pane-graph-node-label {
+  font-family: var(--font-sans); font-size: 10px;
+  fill: var(--text-muted);
+  pointer-events: none;
+}
+.pane-graph-edge { stroke: var(--border); stroke-opacity: 0.5; }
+html[data-theme="dark"] .pane-graph-edge { stroke: #3a3e4f; }
+
+.pane-graph-legend {
+  display: flex; flex-wrap: wrap; gap: 4px 10px;
+  padding: 6px 2px 2px;
+  font-size: 0.68rem;
+  color: var(--text-light);
+}
+.pane-graph-legend-swatch {
+  display: inline-block; width: 8px; height: 8px;
+  border-radius: 50%; margin-right: 4px; vertical-align: middle;
+}
+
+/* Pane infobox — slightly softer border than before */
+.pane-infobox .article-infobox {
+  border-top-width: 2px;
+  border-radius: 8px;
+}
