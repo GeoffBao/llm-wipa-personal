@@ -23,6 +23,7 @@ router.get('/diagrams', async (req, res) => {
     section: 'diagrams',
     count: canvases.length,
     items: `<div class="canvas-gallery">${cardsHtml}</div>`,
+    containerClass: 'browse-list',
     breadcrumb: `<a href="/">Home</a> › Canvas Diagrams`,
     activeNav: 'diagrams',
   }));

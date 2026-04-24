@@ -7,9 +7,9 @@
   <link rel="icon" type="image/svg+xml" href="/public/favicon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300..700&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300..700&family=JetBrains+Mono:wght@400;500&display=swap">
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { width: 100%; height: 100%; overflow: hidden; background: #fdf8f0; color: #1c1710; font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; -webkit-font-smoothing: antialiased; letter-spacing: -0.011em; }
 
     /* Top bar */
@@ -18,89 +18,182 @@
       height: 48px;
       background: rgba(253,248,240,0.92);
       border-bottom: 1px solid rgba(160,120,60,0.15);
-      backdrop-filter: blur(8px);
+      backdrop-filter: blur(12px) saturate(180%);
       display: flex; align-items: center; gap: 12px; padding: 0 16px;
     }
-    .graph-back {
-      color: #1a56db; text-decoration: none; font-size: .85rem;
-      display: flex; align-items: center; gap: 4px; flex-shrink: 0;
-    }
+    .graph-back { color: #1a56db; text-decoration: none; font-size: .85rem; display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
     .graph-back:hover { color: #1e40af; }
-    .graph-title { font-size: .9rem; font-weight: 700; color: #1c1710; flex-shrink: 0; }
-    .graph-stats { font-size: .78rem; color: #9a8d7a; }
+    .graph-title { font-size: .9rem; font-weight: 700; color: #1c1710; flex-shrink: 0; letter-spacing: -0.02em; }
+    .graph-stats { font-size: .75rem; color: #9a8d7a; }
 
-    /* Search box */
-    .graph-search {
-      margin-left: auto;
-      display: flex; align-items: center; gap: 8px;
-    }
+    .graph-search { margin-left: auto; display: flex; align-items: center; gap: 8px; }
     .graph-search input {
-      background: #fff; border: 1px solid #e5d9c4; border-radius: 6px;
+      background: rgba(255,255,255,0.85); border: 1px solid #e5d9c4; border-radius: 7px;
       color: #1c1710; padding: 5px 10px; font-size: .83rem; width: 200px; outline: none;
+      font-family: inherit;
     }
     .graph-search input::placeholder { color: #9a8d7a; }
-    .graph-search input:focus { border-color: #1a56db; box-shadow: 0 0 0 2px rgba(26,86,219,.1); }
+    .graph-search input:focus { border-color: #1a56db; box-shadow: 0 0 0 3px rgba(26,86,219,.12); background: #fff; }
 
-    /* Legend */
-    .graph-legend {
-      position: fixed; bottom: 16px; left: 16px; z-index: 100;
-      background: rgba(253,248,240,0.95); border: 1px solid #e5d9c4;
-      border-radius: 8px; padding: 10px 14px;
-      display: flex; flex-direction: column; gap: 5px;
-      font-size: .75rem;
-      box-shadow: 0 2px 8px rgba(120,80,20,0.08);
+    /* Filter panel toggle button */
+    .graph-filter-btn {
+      display: flex; align-items: center; gap: 5px;
+      padding: 5px 10px; border-radius: 7px;
+      border: 1px solid #e5d9c4; background: rgba(255,255,255,.7);
+      font-size: .78rem; font-weight: 500; color: #6b5f50;
+      cursor: pointer; font-family: inherit; flex-shrink: 0;
+      transition: background .12s, border-color .12s, color .12s;
     }
-    .legend-row { display: flex; align-items: center; gap: 6px; }
-    .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-    .legend-label { color: #6b5f50; }
+    .graph-filter-btn:hover { background: #fff4e0; border-color: #d97706; color: #1c1710; }
+    .graph-filter-btn.active { background: rgba(26,86,219,.08); border-color: rgba(26,86,219,.3); color: #1a56db; }
+    .graph-filter-btn svg { width: 13px; height: 13px; }
+
+    /* Section filter panel */
+    .graph-filter-panel {
+      position: fixed; top: 56px; right: 16px; z-index: 110;
+      background: rgba(253,248,240,.97); border: 1px solid #e5d9c4;
+      border-radius: 10px; padding: 14px 16px;
+      min-width: 200px;
+      box-shadow: 0 4px 20px rgba(120,80,20,.12), 0 1px 4px rgba(120,80,20,.06);
+      display: none;
+    }
+    .graph-filter-panel.open { display: block; }
+    .filter-panel-title { font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: #9a8d7a; margin-bottom: 8px; }
+    .filter-section-list { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
+    .filter-section-row {
+      display: flex; align-items: center; gap: 8px;
+      font-size: .8rem; color: #1c1710; cursor: pointer;
+      padding: 3px 4px; border-radius: 5px;
+      user-select: none;
+    }
+    .filter-section-row:hover { background: rgba(0,0,0,.03); }
+    .filter-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .filter-section-row input[type=checkbox] { display: none; }
+    .filter-section-row.hidden-section { opacity: .35; }
+    .filter-sep { height: 1px; background: #e5d9c4; margin: 8px 0; }
+    .filter-backlinks-row { display: flex; flex-direction: column; gap: 5px; margin-bottom: 2px; }
+    .filter-backlinks-label { font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: #9a8d7a; }
+    .filter-backlinks-controls { display: flex; align-items: center; gap: 8px; }
+    .filter-bl-slider { flex: 1; -webkit-appearance: none; height: 3px; border-radius: 2px; background: #e5d9c4; outline: none; cursor: pointer; }
+    .filter-bl-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: #1a56db; cursor: pointer; }
+    .filter-bl-val { font-family: "JetBrains Mono", monospace; font-size: .75rem; color: #6b5f50; min-width: 12px; text-align: right; }
+    .filter-reset-btn { font-size: .72rem; color: #1a56db; background: none; border: none; cursor: pointer; padding: 0; font-family: inherit; margin-top: 8px; display: block; }
+    .filter-reset-btn:hover { text-decoration: underline; }
+    .filter-kbd-hint { font-size: .68rem; color: #9a8d7a; margin-top: 10px; border-top: 1px solid #e5d9c4; padding-top: 8px; display: flex; flex-direction: column; gap: 3px; }
+    .filter-kbd-hint kbd { font-family: "JetBrains Mono", monospace; background: #f0e8d8; border-radius: 3px; padding: 1px 5px; font-size: .68rem; }
+
+    /* Focus info card */
+    .graph-focus-card {
+      position: fixed; bottom: 60px; right: 16px; z-index: 110;
+      background: rgba(253,248,240,.97); border: 1px solid #e5d9c4;
+      border-radius: 10px; padding: 14px 16px;
+      width: 220px;
+      box-shadow: 0 4px 20px rgba(120,80,20,.12);
+      display: none;
+    }
+    .graph-focus-card.open { display: block; }
+    .focus-card-title { font-size: .9rem; font-weight: 700; color: #1c1710; line-height: 1.3; margin-bottom: 4px; letter-spacing: -0.015em; }
+    .focus-card-meta { font-size: .72rem; color: #9a8d7a; margin-bottom: 8px; }
+    .focus-card-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; }
+    .focus-card-tag { font-size: .65rem; padding: 1px 7px; border-radius: 999px; background: rgba(180,83,9,.06); border: 1px solid rgba(180,83,9,.18); color: #6b5f50; }
+    .focus-card-open {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: .78rem; font-weight: 600; color: #fff;
+      background: #1a56db; border-radius: 6px; padding: 5px 12px;
+      text-decoration: none; transition: background .12s;
+    }
+    .focus-card-open:hover { background: #1e40af; text-decoration: none; color: #fff; }
+    .focus-card-close { float: right; background: none; border: none; cursor: pointer; color: #9a8d7a; font-size: 1rem; line-height: 1; margin-top: -2px; }
+    .focus-card-close:hover { color: #1c1710; }
 
     /* Controls */
-    .graph-controls {
-      position: fixed; bottom: 16px; right: 16px; z-index: 100;
-      display: flex; flex-direction: column; gap: 6px;
-    }
+    .graph-controls { position: fixed; bottom: 16px; right: 16px; z-index: 100; display: flex; flex-direction: column; gap: 5px; }
     .ctrl-btn {
       width: 32px; height: 32px;
       background: rgba(253,248,240,.95); border: 1px solid #e5d9c4;
-      border-radius: 6px; color: #6b5f50; font-size: 1rem; cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
+      border-radius: 6px; color: #6b5f50; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; font-size: .85rem;
       box-shadow: 0 1px 3px rgba(120,80,20,0.06);
     }
     .ctrl-btn:hover { background: #fff4e0; color: #1a56db; }
 
     /* Tooltip */
     .node-tooltip {
-      position: fixed; z-index: 200;
+      position: fixed; z-index: 200; pointer-events: none;
       background: rgba(253,248,240,.97); border: 1px solid #e5d9c4;
-      border-radius: 6px; padding: 6px 10px;
-      font-size: .8rem; color: #1c1710; pointer-events: none;
-      max-width: 220px; line-height: 1.4;
-      box-shadow: 0 4px 12px rgba(120,80,20,0.12);
+      border-radius: 6px; padding: 5px 10px;
+      font-size: .78rem; color: #1c1710; max-width: 200px; line-height: 1.4;
+      box-shadow: 0 4px 12px rgba(120,80,20,0.1);
     }
-    .tooltip-section { font-size: .7rem; color: #9a8d7a; margin-top: 2px; }
+    .tooltip-section { font-size: .68rem; color: #9a8d7a; margin-top: 2px; }
 
-    /* SVG canvas */
+    /* Keyboard shortcut hint bottom-left */
+    .graph-kbd-hint {
+      position: fixed; bottom: 16px; left: 16px; z-index: 100;
+      font-size: .68rem; color: #b0a090;
+      display: flex; flex-direction: column; gap: 2px;
+    }
+    .graph-kbd-hint kbd { font-family: "JetBrains Mono", monospace; background: rgba(253,248,240,.9); border: 1px solid #e5d9c4; border-radius: 3px; padding: 0 4px; font-size: .65rem; }
+
+    /* SVG */
     svg { width: 100%; height: 100%; display: block; }
     .link { stroke: #e5d9c4; stroke-width: 1; opacity: .7; }
     .link.highlighted { stroke: #1a56db; stroke-width: 1.5; opacity: 1; }
-    .node circle { cursor: pointer; stroke: rgba(255,255,255,.6); stroke-width: 1.5; }
+    .node circle { cursor: pointer; stroke: rgba(255,255,255,.6); stroke-width: 1.5; transition: stroke .1s; }
     .node circle:hover { stroke: #fff; stroke-width: 2; }
-    .node.dimmed circle { opacity: .15; }
+    .node.dimmed circle { opacity: .12; }
     .node.dimmed text { opacity: 0; }
-    .link.dimmed { opacity: .06; }
+    .node.hidden-node { display: none; }
+    .link.dimmed { opacity: .05; }
+    .link.hidden-link { display: none; }
     .node-label { fill: #6b5f50; font-size: 9px; pointer-events: none; text-anchor: middle; }
-    .node.highlighted .node-label { fill: #1c1710; font-size: 10px; font-weight: 600; }
+    .node.focused .node-label { fill: #1c1710; font-size: 10px; font-weight: 700; }
+    .node.focused circle { stroke: #fff; stroke-width: 2.5; filter: drop-shadow(0 0 4px rgba(26,86,219,.4)); }
     #graph-svg { margin-top: 48px; height: calc(100vh - 48px); }
   </style>
 </head>
 <body>
   <div class="graph-topbar">
-    <a href="/" class="graph-back">← LLM KB</a>
+    <a href="/" class="graph-back">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 5-7 7 7 7"/></svg>
+      LLM KB
+    </a>
     <span class="graph-title">Knowledge Graph</span>
     <span class="graph-stats" id="graph-stats">Loading…</span>
     <div class="graph-search">
-      <input type="search" id="graph-search-input" placeholder="Search nodes…" autocomplete="off">
+      <input type="search" id="graph-search-input" placeholder="Search nodes… (/)" autocomplete="off">
     </div>
+    <button class="graph-filter-btn" id="graph-filter-btn" title="Section & backlink filters">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
+      Filters
+    </button>
+  </div>
+
+  <!-- Section + backlinks filter panel -->
+  <div class="graph-filter-panel" id="graph-filter-panel">
+    <div class="filter-panel-title">Sections</div>
+    <div class="filter-section-list" id="filter-section-list"></div>
+    <div class="filter-sep"></div>
+    <div class="filter-backlinks-row">
+      <div class="filter-backlinks-label">Min Backlinks</div>
+      <div class="filter-backlinks-controls">
+        <input type="range" class="filter-bl-slider" id="filter-bl-slider" min="0" max="20" value="0" step="1">
+        <span class="filter-bl-val" id="filter-bl-val">0</span>
+      </div>
+    </div>
+    <button class="filter-reset-btn" id="filter-reset-btn">Reset all filters</button>
+    <div class="filter-kbd-hint">
+      <span><kbd>/</kbd> search · <kbd>f</kbd> fit · <kbd>r</kbd> reset · <kbd>Esc</kbd> clear</span>
+    </div>
+  </div>
+
+  <!-- Node focus info card -->
+  <div class="graph-focus-card" id="graph-focus-card">
+    <button class="focus-card-close" id="focus-card-close" aria-label="Close">×</button>
+    <div class="focus-card-title" id="focus-card-title"></div>
+    <div class="focus-card-meta" id="focus-card-meta"></div>
+    <div class="focus-card-tags" id="focus-card-tags"></div>
+    <a href="#" class="focus-card-open" id="focus-card-open">Open article →</a>
   </div>
 
   <svg id="graph-svg">
@@ -110,12 +203,14 @@
     </g>
   </svg>
 
-  <div class="graph-legend" id="graph-legend"></div>
-
   <div class="graph-controls">
-    <button class="ctrl-btn" id="btn-fit" title="Fit view">⊡</button>
-    <button class="ctrl-btn" id="btn-plus" title="Zoom in">+</button>
-    <button class="ctrl-btn" id="btn-minus" title="Zoom out">−</button>
+    <button class="ctrl-btn" id="btn-fit" title="Fit view (f)">⊡</button>
+    <button class="ctrl-btn" id="btn-plus" title="Zoom in (+)">+</button>
+    <button class="ctrl-btn" id="btn-minus" title="Zoom out (−)">−</button>
+  </div>
+
+  <div class="graph-kbd-hint" id="graph-kbd-hint">
+    <span><kbd>/</kbd> search · <kbd>f</kbd> fit · <kbd>r</kbd> reset · <kbd>Esc</kbd> clear</span>
   </div>
 
   <div class="node-tooltip" id="node-tooltip" style="display:none"></div>
@@ -124,141 +219,226 @@
   <script>
   (async () => {
     const sectionLabels = {
-      concepts: 'Concept', sources: 'Source', mocs: 'Map',
-      synthesis: 'Synthesis', prompts: 'Prompt', notes: 'Note',
-      projects: 'Project', wiki: 'Other',
+      concepts: 'Concepts', sources: 'Sources', mocs: 'Maps',
+      synthesis: 'Synthesis', prompts: 'Prompts', notes: 'Notes',
+      projects: 'Projects', wiki: 'Other',
     };
 
     const data = await fetch('/api/graph').then(r => r.json());
     const { nodes, links, sections } = data;
+    document.getElementById('graph-stats').textContent = `${nodes.length} nodes · ${links.length} links`;
 
-    // Legend
-    const legend = document.getElementById('graph-legend');
-    sections.forEach(({ section, color }) => {
-      const row = document.createElement('div');
-      row.className = 'legend-row';
-      row.innerHTML = `<div class="legend-dot" style="background:${color}"></div><span class="legend-label">${sectionLabels[section] || section}</span>`;
-      legend.appendChild(row);
-    });
-
-    document.getElementById('graph-stats').textContent =
-      `${nodes.length} nodes · ${links.length} links`;
-
+    // ── SVG + zoom ──────────────────────────────────────────────────────────
     const svgEl = document.getElementById('graph-svg');
     const W = svgEl.clientWidth, H = svgEl.clientHeight;
     const svg = d3.select('#graph-svg');
     const g = d3.select('#graph-root');
 
-    // Zoom behavior
-    const zoom = d3.zoom()
-      .scaleExtent([0.05, 8])
-      .on('zoom', e => g.attr('transform', e.transform));
+    const zoom = d3.zoom().scaleExtent([0.05, 8]).on('zoom', e => g.attr('transform', e.transform));
     svg.call(zoom);
 
-    // Node radius: min 3, max 14, based on backlinks
     const maxBL = d3.max(nodes, d => d.backlinks) || 1;
     const rScale = d3.scaleSqrt().domain([0, maxBL]).range([3, 14]);
 
-    // Simulation
+    // ── Simulation ──────────────────────────────────────────────────────────
     const simulation = d3.forceSimulation(nodes)
       .force('link', d3.forceLink(links).id(d => d.id).distance(60).strength(0.3))
       .force('charge', d3.forceManyBody().strength(-120))
       .force('center', d3.forceCenter(W / 2, H / 2))
       .force('collision', d3.forceCollide(d => rScale(d.backlinks) + 3));
 
-    // Draw links
-    const link = d3.select('#links-layer')
-      .selectAll('line')
-      .data(links)
-      .join('line')
-      .attr('class', 'link');
+    // ── Draw links ──────────────────────────────────────────────────────────
+    const link = d3.select('#links-layer').selectAll('line').data(links).join('line').attr('class', 'link');
 
-    // Draw nodes
-    const node = d3.select('#nodes-layer')
-      .selectAll('g')
-      .data(nodes)
-      .join('g')
-      .attr('class', 'node')
+    // ── Draw nodes ──────────────────────────────────────────────────────────
+    const node = d3.select('#nodes-layer').selectAll('g').data(nodes).join('g').attr('class', 'node')
       .call(d3.drag()
         .on('start', (e, d) => { if (!e.active) simulation.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; })
-        .on('drag', (e, d) => { d.fx = e.x; d.fy = e.y; })
-        .on('end', (e, d) => { if (!e.active) simulation.alphaTarget(0); d.fx = null; d.fy = null; })
+        .on('drag',  (e, d) => { d.fx = e.x; d.fy = e.y; })
+        .on('end',   (e, d) => { if (!e.active) simulation.alphaTarget(0); d.fx = null; d.fy = null; })
       );
 
-    node.append('circle')
-      .attr('r', d => rScale(d.backlinks))
-      .attr('fill', d => d.color);
-
-    node.append('text')
-      .attr('class', 'node-label')
+    node.append('circle').attr('r', d => rScale(d.backlinks)).attr('fill', d => d.color);
+    node.append('text').attr('class', 'node-label')
       .attr('dy', d => rScale(d.backlinks) + 10)
       .text(d => d.title.length > 14 ? d.title.slice(0, 13) + '…' : d.title);
 
-    // Tooltip
+    // ── Tooltip ─────────────────────────────────────────────────────────────
     const tooltip = document.getElementById('node-tooltip');
     node
       .on('mouseenter', (e, d) => {
         tooltip.style.display = 'block';
-        tooltip.innerHTML = `<div>${d.title}</div><div class="tooltip-section">${sectionLabels[d.section] || d.section} · ${d.backlinks} backlinks</div>`;
+        tooltip.innerHTML = `<div>${esc(d.title)}</div><div class="tooltip-section">${sectionLabels[d.section] || d.section} · ${d.backlinks} backlinks</div>`;
       })
-      .on('mousemove', (e) => {
-        tooltip.style.left = (e.clientX + 12) + 'px';
-        tooltip.style.top = (e.clientY - 8) + 'px';
-      })
+      .on('mousemove', e => { tooltip.style.left = (e.clientX + 14) + 'px'; tooltip.style.top = (e.clientY - 8) + 'px'; })
       .on('mouseleave', () => { tooltip.style.display = 'none'; })
-      .on('click', (e, d) => { window.location.href = '/wiki/' + d.id; });
+      .on('click', (e, d) => {
+        e.stopPropagation();
+        if (e.metaKey || e.ctrlKey) { window.location.href = '/wiki/' + d.id; return; }
+        focusNode(d);
+      })
+      .on('dblclick', (e, d) => { e.stopPropagation(); window.location.href = '/wiki/' + d.id; });
 
-    // Tick
+    // Click on background clears focus
+    svg.on('click', () => clearFocus());
+
+    // ── Focus mode ──────────────────────────────────────────────────────────
+    let focusedId = null;
+
+    function focusNode(d) {
+      focusedId = d.id;
+      const neighborIds = new Set([d.id]);
+      links.forEach(l => {
+        if (l.source.id === d.id) neighborIds.add(l.target.id);
+        if (l.target.id === d.id) neighborIds.add(l.source.id);
+      });
+
+      node.classed('dimmed', n => !neighborIds.has(n.id))
+          .classed('focused', n => n.id === d.id)
+          .classed('highlighted', n => neighborIds.has(n.id) && n.id !== d.id);
+      link.classed('dimmed', l => l.source.id !== d.id && l.target.id !== d.id)
+          .classed('highlighted', l => l.source.id === d.id || l.target.id === d.id);
+
+      // Show focus card
+      document.getElementById('focus-card-title').textContent = d.title;
+      document.getElementById('focus-card-meta').textContent =
+        `${sectionLabels[d.section] || d.section} · ${d.backlinks} backlink${d.backlinks !== 1 ? 's' : ''} · ${neighborIds.size - 1} neighbor${neighborIds.size !== 2 ? 's' : ''}`;
+      const tagsEl = document.getElementById('focus-card-tags');
+      tagsEl.innerHTML = '';
+      document.getElementById('focus-card-open').href = '/wiki/' + d.id;
+      document.getElementById('graph-focus-card').classList.add('open');
+    }
+
+    function clearFocus() {
+      focusedId = null;
+      node.classed('dimmed', false).classed('focused', false).classed('highlighted', false);
+      link.classed('dimmed', false).classed('highlighted', false);
+      document.getElementById('graph-focus-card').classList.remove('open');
+      applyFilters(); // restore visibility from section/BL filters
+    }
+
+    // ── Section filters ─────────────────────────────────────────────────────
+    const hiddenSections = new Set();
+    let minBacklinks = 0;
+    const sectionList = document.getElementById('filter-section-list');
+
+    sections.forEach(({ section, color }) => {
+      const row = document.createElement('label');
+      row.className = 'filter-section-row';
+      row.innerHTML = `<input type="checkbox" checked><div class="filter-dot" style="background:${color}"></div><span>${sectionLabels[section] || section}</span>`;
+      row.querySelector('input').addEventListener('change', e => {
+        if (e.target.checked) hiddenSections.delete(section); else hiddenSections.add(section);
+        row.classList.toggle('hidden-section', !e.target.checked);
+        applyFilters();
+      });
+      sectionList.appendChild(row);
+    });
+
+    const blSlider = document.getElementById('filter-bl-slider');
+    const blVal = document.getElementById('filter-bl-val');
+    blSlider.max = Math.max(maxBL, 1);
+    blSlider.addEventListener('input', () => {
+      minBacklinks = +blSlider.value;
+      blVal.textContent = minBacklinks;
+      applyFilters();
+    });
+
+    function applyFilters() {
+      node.classed('hidden-node', d =>
+        hiddenSections.has(d.section) || d.backlinks < minBacklinks
+      );
+      link.classed('hidden-link', l => {
+        const s = l.source, t = l.target;
+        return hiddenSections.has(s.section) || hiddenSections.has(t.section) ||
+               s.backlinks < minBacklinks || t.backlinks < minBacklinks;
+      });
+      const visNodes = nodes.filter(d => !hiddenSections.has(d.section) && d.backlinks >= minBacklinks);
+      const visLinks = links.filter(l =>
+        !hiddenSections.has(l.source.section) && !hiddenSections.has(l.target.section) &&
+        l.source.backlinks >= minBacklinks && l.target.backlinks >= minBacklinks);
+      document.getElementById('graph-stats').textContent = `${visNodes.length} / ${nodes.length} nodes · ${visLinks.length} links`;
+    }
+
+    document.getElementById('filter-reset-btn').addEventListener('click', () => {
+      hiddenSections.clear(); minBacklinks = 0; blSlider.value = 0; blVal.textContent = '0';
+      sectionList.querySelectorAll('input[type=checkbox]').forEach(cb => { cb.checked = true; });
+      sectionList.querySelectorAll('.filter-section-row').forEach(r => r.classList.remove('hidden-section'));
+      applyFilters();
+    });
+
+    // Filter panel toggle
+    const filterBtn = document.getElementById('graph-filter-btn');
+    const filterPanel = document.getElementById('graph-filter-panel');
+    filterBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      const open = filterPanel.classList.toggle('open');
+      filterBtn.classList.toggle('active', open);
+    });
+    document.addEventListener('click', e => {
+      if (!filterPanel.contains(e.target) && e.target !== filterBtn) {
+        filterPanel.classList.remove('open');
+        filterBtn.classList.remove('active');
+      }
+    });
+
+    // Focus card close
+    document.getElementById('focus-card-close').addEventListener('click', clearFocus);
+
+    // ── Tick ─────────────────────────────────────────────────────────────────
     simulation.on('tick', () => {
-      link
-        .attr('x1', d => d.source.x).attr('y1', d => d.source.y)
-        .attr('x2', d => d.target.x).attr('y2', d => d.target.y);
+      link.attr('x1', d => d.source.x).attr('y1', d => d.source.y)
+          .attr('x2', d => d.target.x).attr('y2', d => d.target.y);
       node.attr('transform', d => `translate(${d.x},${d.y})`);
     });
 
-    // Fit view after simulation settles
     simulation.on('end', fitView);
     setTimeout(fitView, 2500);
 
     function fitView() {
       const bounds = g.node().getBBox();
       if (!bounds.width) return;
-      const padding = 40;
-      const scaleX = (W - padding * 2) / bounds.width;
-      const scaleY = (H - padding * 2) / bounds.height;
-      const scale = Math.min(scaleX, scaleY, 1);
+      const pad = 40;
+      const scale = Math.min((W - pad * 2) / bounds.width, (H - pad * 2) / bounds.height, 1);
       const tx = (W - bounds.width * scale) / 2 - bounds.x * scale;
       const ty = (H - bounds.height * scale) / 2 - bounds.y * scale;
-      svg.transition().duration(600)
-        .call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(scale));
+      svg.transition().duration(600).call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(scale));
     }
 
-    // Search
+    // ── Search ───────────────────────────────────────────────────────────────
     const searchInput = document.getElementById('graph-search-input');
     searchInput.addEventListener('input', () => {
       const q = searchInput.value.trim().toLowerCase();
-      if (!q) {
-        node.classed('dimmed', false).classed('highlighted', false);
-        link.classed('dimmed', false).classed('highlighted', false);
-        return;
-      }
-      const matchSlugs = new Set(
-        nodes.filter(d => d.title.toLowerCase().includes(q) || d.id.includes(q)).map(d => d.id)
-      );
-      node.classed('dimmed', d => !matchSlugs.has(d.id))
-          .classed('highlighted', d => matchSlugs.has(d.id));
+      if (!q) { clearFocus(); return; }
+      const matchSlugs = new Set(nodes.filter(d => d.title.toLowerCase().includes(q) || d.id.includes(q)).map(d => d.id));
+      node.classed('dimmed', d => !matchSlugs.has(d.id)).classed('highlighted', d => matchSlugs.has(d.id));
       link.classed('dimmed', d => !matchSlugs.has(d.source.id) && !matchSlugs.has(d.target.id))
           .classed('highlighted', d => matchSlugs.has(d.source.id) || matchSlugs.has(d.target.id));
     });
 
-    // Controls
+    // ── Controls ─────────────────────────────────────────────────────────────
     document.getElementById('btn-fit').addEventListener('click', fitView);
-    document.getElementById('btn-plus').addEventListener('click', () => {
-      svg.transition().duration(200).call(zoom.scaleBy, 1.5);
+    document.getElementById('btn-plus').addEventListener('click', () => svg.transition().duration(200).call(zoom.scaleBy, 1.5));
+    document.getElementById('btn-minus').addEventListener('click', () => svg.transition().duration(200).call(zoom.scaleBy, 0.67));
+
+    // ── Keyboard shortcuts ───────────────────────────────────────────────────
+    document.addEventListener('keydown', e => {
+      if (e.target === searchInput) {
+        if (e.key === 'Escape') { searchInput.value = ''; searchInput.blur(); clearFocus(); }
+        return;
+      }
+      if (e.key === '/' || e.key === 'f' && false) { e.preventDefault(); searchInput.focus(); searchInput.select(); return; }
+      if (e.key === '/') { e.preventDefault(); searchInput.focus(); }
+      if (e.key === 'f') { fitView(); }
+      if (e.key === 'r') {
+        document.getElementById('filter-reset-btn').click();
+        clearFocus();
+        searchInput.value = '';
+      }
+      if (e.key === 'Escape') { clearFocus(); searchInput.value = ''; }
     });
-    document.getElementById('btn-minus').addEventListener('click', () => {
-      svg.transition().duration(200).call(zoom.scaleBy, 0.67);
-    });
+
+    // ── Utility ──────────────────────────────────────────────────────────────
+    function esc(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
   })();
   </script>
 </body>

@@ -70,12 +70,14 @@ async function start() {
   await loadExcalidrawFiles();
   console.log(`[boot] Ready: ${files.length} files indexed`);
 
-  // Watch Wiki directory for changes
+  // Watch Wiki, Notes, Projects for changes
   const wikiDir = join(VAULT_PATH, 'Wiki');
-  const watcher = chokidar.watch(`${wikiDir}/**/*.md`, {
-    ignoreInitial: true,
-    persistent: true,
-  });
+  const notesDir = join(VAULT_PATH, 'Notes');
+  const projectsDir = join(VAULT_PATH, 'Projects');
+  const watcher = chokidar.watch(
+    [wikiDir, notesDir, projectsDir].map(d => `${d}/**/*.md`),
+    { ignoreInitial: true, persistent: true }
+  );
 
   watcher
     .on('add', path => scheduleRebuild(path, 'add'))
