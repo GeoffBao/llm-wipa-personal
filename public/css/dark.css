@@ -118,18 +118,32 @@ html[data-theme="dark"] .rw-cat-pdf     { background: rgba(248,113,113,0.14);col
    give them a dark wash if they inherit from body. */
 html[data-theme="dark"] body { color-scheme: dark; }
 
-/* Theme toggle button */
-.theme-toggle {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 32px; height: 32px; margin-left: 4px;
-  background: transparent; border: 1px solid transparent;
-  border-radius: 8px; cursor: pointer;
-  color: var(--text-muted);
-  transition: background 0.12s var(--ease), color 0.12s var(--ease), border-color 0.12s var(--ease);
+/* Theme switcher — 3-way segmented control */
+.theme-switcher {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 4px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  overflow: hidden;
+  flex-shrink: 0;
 }
-.theme-toggle:hover { background: rgba(0,0,0,0.05); color: var(--text); border-color: var(--border-light); }
-html[data-theme="dark"] .theme-toggle:hover { background: rgba(255,255,255,0.04); }
-.theme-toggle svg { width: 16px; height: 16px; }
-.theme-toggle .moon { display: none; }
-html[data-theme="dark"] .theme-toggle .sun  { display: none; }
-html[data-theme="dark"] .theme-toggle .moon { display: block; }
+.theme-opt {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 28px;
+  background: transparent;
+  border: none;
+  border-right: 1px solid var(--border);
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: background 0.12s var(--ease), color 0.12s var(--ease);
+  padding: 0;
+}
+.theme-opt:last-child { border-right: none; }
+.theme-opt svg { width: 14px; height: 14px; }
+.theme-opt:hover { background: var(--bg-hover); color: var(--text); }
+.theme-opt.active { background: var(--blue); color: #fff; }
+html[data-theme="dark"] .theme-opt.active { color: #0f1014; }
+html[data-theme="wikipedia"] .theme-opt.active { background: #3366cc; color: #fff; }
+html[data-theme="wikipedia"] .theme-switcher { border-color: #a2a9b1; border-radius: 2px; }
+html[data-theme="wikipedia"] .theme-opt { border-right-color: #a2a9b1; }

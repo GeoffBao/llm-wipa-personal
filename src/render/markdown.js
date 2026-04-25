@@ -38,27 +38,41 @@ const wikilinkExtension = {
 };
 
 // Obsidian image embed extension: ![[filename.ext]]
-const embedExtension = {
-  name: 'embed',
-  level: 'inline',
-  start(src) { return src.indexOf('![['); },
-  tokenizer(src) {
-    const match = src.match(/^!\[\[([^\]]+)\]\]/);
-    if (match) return { type: 'embed', raw: match[0], text: match[1] };
-  },
-  renderer(token) {
-    const filename = token.text.trim();
-    if (/\.(png|jpg|jpeg|gif|webp|svg)$/i.test(filename)) {
-      const asset = resolveAsset(filename);
-      if (asset) return `<img src="${asset}" alt="${escapeHtml(filename)}" class="article-image" loading="lazy">`;
-      return `<span class="embed-missing">[图片: ${escapeHtml(filename)}]</span>`;
-    }
-    if (/\.excalidraw$/i.test(filename)) {
-      return `<div class="embed-placeholder">📐 图表: ${escapeHtml(filename)}</div>`;
-    }
-    return `<span class="embed-missing">[嵌入: ${escapeHtml(filename)}]</span>`;
-  },
-};
+// fileDir: absolute directory of the source .md file (for relative path fallback)
+function buildEmbedExtension(fileDir = null) {
+  return {
+    name: 'embed',
+    level: 'inline',
+    start(src) { return src.indexOf('![['); },
+    tokenizer(src) {
+      const match = src.match(/^!\[\[([^\]]+)\]\]/);
+      if (match) return { type: 'embed', raw: match[0], text: match[1] };
+    },
+    renderer(token) {
+      const filename = token.text.trim();
+      if (/\.(png|jpg|jpeg|gif|webp|svg)$/i.test(filename)) {
+        // 1. Try global asset index (Assets/ folder, also by basename)
+        const asset = resolveAsset(filename);
+        if (asset) return `<img src="${asset}" alt="${escapeHtml(filename)}" class="article-image" loading="lazy">`;
+        // 2. Fallback: resolve relative to article file → serve via /vault/
+        if (fileDir) {
+          const absPath = resolve(fileDir, filename);
+          const relToVault = relative(VAULT_PATH, absPath).replace(/\\/g, '/');
+          const encodedPath = relToVault.split('/').map(encodeURIComponent).join('/');
+          return `<img src="/vault/${encodedPath}" alt="${escapeHtml(filename)}" class="article-image" loading="lazy">`;
+        }
+        return `<span class="embed-missing">[图片: ${escapeHtml(filename)}]</span>`;
+      }
+      if (/\.excalidraw$/i.test(filename)) {
+        return `<div class="embed-placeholder">📐 图表: ${escapeHtml(filename)}</div>`;
+      }
+      return `<span class="embed-missing">[嵌入: ${escapeHtml(filename)}]</span>`;
+    },
+  };
+}
+
+// No-context version (used when filePath is unknown)
+const embedExtension = buildEmbedExtension(null);
 
 const baseRenderer = {
   heading({ text, depth }) {
@@ -105,9 +119,10 @@ marked.use({ renderer: baseRenderer });
 
 export function renderMarkdown(markdown, filePath = null) {
   if (filePath) {
+    const fileDir = dirname(filePath);
     const instance = new Marked(highlightPlugin);
-    instance.use({ extensions: [wikilinkExtension, embedExtension] });
-    instance.use({ renderer: { ...baseRenderer, ...buildImageRenderer(dirname(filePath)) } });
+    instance.use({ extensions: [wikilinkExtension, buildEmbedExtension(fileDir)] });
+    instance.use({ renderer: { ...baseRenderer, ...buildImageRenderer(fileDir) } });
     return instance.parse(markdown);
   }
   return marked.parse(markdown);

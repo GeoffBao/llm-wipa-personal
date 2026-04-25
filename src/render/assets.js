@@ -28,5 +28,8 @@ function scanDir(dir, base) {
 }
 
 export function resolveAsset(filename) {
-  return assetMap.get(filename.toLowerCase()) || null;
+  const lower = filename.toLowerCase();
+  if (assetMap.has(lower)) return assetMap.get(lower);
+  // Also try basename only — handles ![[subfolder/file.png]] → 'file.png'
+  return assetMap.get(basename(filename).toLowerCase()) || null;
 }

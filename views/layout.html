@@ -11,20 +11,30 @@
   <link rel="stylesheet" href="/public/css/main.css">
   <link rel="stylesheet" href="/public/css/hljs.css">
   <link rel="stylesheet" href="/public/css/dark.css">
+  <link rel="stylesheet" href="/public/css/wikipedia.css">
   <link rel="stylesheet" href="/public/css/palette.css">
   <link rel="stylesheet" href="/public/css/right-pane.css">
   <script>
     // Theme bootstrap — runs before paint to avoid flash
     (function () {
+      var THEMES = ['light', 'dark', 'wikipedia'];
       try {
         var t = localStorage.getItem('wipa-theme');
-        if (t === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+        if (t === 'dark' || t === 'wikipedia') document.documentElement.setAttribute('data-theme', t);
       } catch (e) {}
-      window.__toggleTheme = function () {
-        var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-        if (next === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+      window.__setTheme = function (t) {
+        if (t === 'dark' || t === 'wikipedia') document.documentElement.setAttribute('data-theme', t);
         else document.documentElement.removeAttribute('data-theme');
-        try { localStorage.setItem('wipa-theme', next); } catch (e) {}
+        try { localStorage.setItem('wipa-theme', t || 'light'); } catch (e) {}
+        document.querySelectorAll('.theme-opt').forEach(function (b) {
+          b.classList.toggle('active', b.dataset.t === (t || 'light'));
+        });
+      };
+      // Kept for palette/legacy callers — cycles light→dark→wikipedia→light
+      window.__toggleTheme = function () {
+        var cur = document.documentElement.getAttribute('data-theme') || 'light';
+        var idx = THEMES.indexOf(cur);
+        window.__setTheme(THEMES[(idx + 1) % THEMES.length]);
       };
     })();
   </script>
@@ -56,10 +66,17 @@
           <span class="palette-trigger-kbd" aria-hidden="true">⌘K</span>
         </div>
       </form>
-      <button class="theme-toggle" id="theme-toggle" aria-label="Toggle dark mode" title="Toggle theme (⌘K → Toggle Dark / Light Mode)">
-        <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
-        <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-      </button>
+      <div class="theme-switcher" id="theme-switcher" role="group" aria-label="Color theme">
+        <button class="theme-opt" data-t="light" title="Light theme" aria-label="Light theme">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+        </button>
+        <button class="theme-opt" data-t="dark" title="Dark theme" aria-label="Dark theme">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+        <button class="theme-opt" data-t="wikipedia" title="Wikipedia theme" aria-label="Wikipedia theme">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h5l4 10 4-10h5"/><path d="M7 5c0 7 2 12 5 14"/><path d="M17 5c0 7-2 12-5 14"/></svg>
+        </button>
+      </div>
       <nav class="header-nav">
         <a href="/" class="nav-link">Home</a>
         <a href="/browse/concepts" class="nav-link">Concepts</a>
@@ -149,7 +166,14 @@
       const r = await fetch('/api/random').then(r => r.json());
       if (r.slug) window.location.href = '/wiki/' + r.slug;
     });
-    document.getElementById('theme-toggle')?.addEventListener('click', () => window.__toggleTheme?.());
+    // Wire up 3-way theme switcher
+    (function () {
+      var cur = document.documentElement.getAttribute('data-theme') || 'light';
+      document.querySelectorAll('.theme-opt').forEach(function (btn) {
+        btn.classList.toggle('active', btn.dataset.t === cur);
+        btn.addEventListener('click', function () { window.__setTheme?.(this.dataset.t); });
+      });
+    })();
     window.addEventListener('load', () => {
       if (window.mermaid) {
         const dark = document.documentElement.getAttribute('data-theme') === 'dark';

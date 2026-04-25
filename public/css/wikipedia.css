@@ -1,0 +1,362 @@
+/* =========================================================
+   Wikipedia theme — activated by <html data-theme="wikipedia">
+   High-fidelity recreation of the English Wikipedia visual style.
+   ========================================================= */
+
+html[data-theme="wikipedia"] {
+  /* Core palette — Wikipedia grays */
+  --bg:           #f8f9fa;
+  --bg-card:      #ffffff;
+  --bg-hover:     #eaecf0;
+  --border:       #a2a9b1;
+  --border-light: rgba(162, 169, 177, 0.4);
+  --text:         #202122;
+  --text-muted:   #54595d;
+  --text-light:   #72777d;
+  --heading-color:#000000;
+
+  /* Wikipedia classic blue links */
+  --blue:         #3366cc;
+  --blue-hover:   #447ff5;
+  --blue-light:   #eaf3ff;
+  --blue-visited: #795cb2;
+  --red-missing:  #dd3333;
+  --green:        #00af89;
+  --link-color:   #3366cc;
+
+  /* Header */
+  --header-bg:    #ffffff;
+  --header-border: #a7d7f9;
+
+  /* Flat — no shadows */
+  --shadow-sm: none;
+  --shadow-md: none;
+  --shadow-lg: none;
+
+  /* Minimal radius */
+  --radius:    2px;
+  --radius-sm: 2px;
+  --radius-xs: 2px;
+
+  /* System sans-serif for UI chrome */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Noto Sans", "Liberation Sans",
+               Arial, Helvetica, sans-serif;
+}
+
+/* ---- Global overrides ---- */
+html[data-theme="wikipedia"] body {
+  letter-spacing: 0;
+  -webkit-font-smoothing: auto;
+}
+
+/* ---- Header ---- */
+html[data-theme="wikipedia"] .site-header {
+  background: #ffffff;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-bottom: 1px solid #a7d7f9;
+  box-shadow: none;
+}
+html[data-theme="wikipedia"] .logo-text { color: #202122; }
+html[data-theme="wikipedia"] .logo-byline { color: #54595d; }
+
+html[data-theme="wikipedia"] .search-wrap input[type="search"] {
+  background: #ffffff;
+  border-color: #a2a9b1;
+  border-radius: 2px;
+  color: #202122;
+}
+html[data-theme="wikipedia"] .search-wrap input[type="search"]:focus {
+  border-color: #3366cc;
+  box-shadow: 0 0 0 2px rgba(51,102,204,0.2);
+}
+html[data-theme="wikipedia"] .search-btn { color: #54595d; }
+
+html[data-theme="wikipedia"] .nav-link { color: #3366cc; }
+html[data-theme="wikipedia"] .nav-link:hover { color: #447ff5; text-decoration: underline; }
+
+/* ---- Sidebar ---- */
+html[data-theme="wikipedia"] .sidebar {
+  background: #f8f9fa;
+  border-right: 1px solid #a2a9b1;
+}
+html[data-theme="wikipedia"] .sidebar-heading {
+  color: #54595d;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+}
+html[data-theme="wikipedia"] .sidebar-link { color: #3366cc; border-radius: 2px; }
+html[data-theme="wikipedia"] .sidebar-link:hover {
+  background: #eaecf0;
+  color: #447ff5;
+  text-decoration: underline;
+}
+html[data-theme="wikipedia"] .sidebar-link.active {
+  background: #eaf3ff;
+  color: #3366cc;
+}
+html[data-theme="wikipedia"] .sidebar-icon { color: #72777d; }
+
+/* ---- Main content ---- */
+html[data-theme="wikipedia"] .main-content { background: #ffffff; }
+
+/* ---- Article title ---- */
+html[data-theme="wikipedia"] .article-title {
+  font-family: "Linux Libertine", Georgia, "Times New Roman", serif;
+  font-size: 1.95rem;
+  font-weight: normal;
+  color: #000000;
+  border-bottom: 1px solid #a2a9b1;
+  padding-bottom: 4px;
+  letter-spacing: 0;
+}
+
+/* ---- Article body — serif font ---- */
+html[data-theme="wikipedia"] .article-body {
+  font-family: "Linux Libertine", Georgia, "Times New Roman", Times, serif;
+  font-size: 0.9375rem;
+  line-height: 1.65;
+  letter-spacing: 0;
+}
+
+html[data-theme="wikipedia"] .article-body h2 {
+  font-family: "Linux Libertine", Georgia, "Times New Roman", serif;
+  font-size: 1.3rem;
+  font-weight: bold;
+  border-bottom: 1px solid #a2a9b1;
+  padding-bottom: 3px;
+  color: #000000;
+  letter-spacing: 0;
+}
+html[data-theme="wikipedia"] .article-body h3 {
+  font-family: "Linux Libertine", Georgia, "Times New Roman", serif;
+  font-size: 1.1rem;
+  color: #000000;
+  letter-spacing: 0;
+}
+html[data-theme="wikipedia"] .article-body h4,
+html[data-theme="wikipedia"] .article-body h5,
+html[data-theme="wikipedia"] .article-body h6 {
+  font-family: "Linux Libertine", Georgia, "Times New Roman", serif;
+  color: #202122;
+  letter-spacing: 0;
+}
+
+/* Links */
+html[data-theme="wikipedia"] .article-body a { color: #3366cc; }
+html[data-theme="wikipedia"] .article-body a:hover { color: #447ff5; text-decoration: underline; }
+html[data-theme="wikipedia"] .article-body a:visited { color: #795cb2; }
+html[data-theme="wikipedia"] .wikilink-missing,
+html[data-theme="wikipedia"] .article-body .wikilink-missing { color: #dd3333 !important; }
+
+/* Blockquote */
+html[data-theme="wikipedia"] .article-body blockquote {
+  background: transparent;
+  border-left: 3px solid #a2a9b1;
+  color: #54595d;
+  border-radius: 0;
+  font-style: italic;
+}
+
+/* Code */
+html[data-theme="wikipedia"] .article-body code {
+  background: #f8f9fa;
+  border: 1px solid #d5d5d5;
+  border-radius: 2px;
+  color: #202122;
+  font-size: 0.875em;
+}
+html[data-theme="wikipedia"] .article-body pre {
+  background: #f8f9fa;
+  border: 1px solid #a2a9b1;
+  border-radius: 2px;
+  box-shadow: none;
+}
+html[data-theme="wikipedia"] .article-body pre code {
+  background: transparent;
+  border: none;
+  color: #202122;
+}
+
+/* Tables */
+html[data-theme="wikipedia"] .article-body table {
+  border: 1px solid #a2a9b1;
+  font-size: 0.875rem;
+}
+html[data-theme="wikipedia"] .article-body th {
+  background: #eaecf0;
+  border: 1px solid #a2a9b1;
+  color: #202122;
+  font-weight: bold;
+  border-radius: 0;
+}
+html[data-theme="wikipedia"] .article-body td {
+  border: 1px solid #a2a9b1;
+  border-bottom: 1px solid #a2a9b1;
+}
+html[data-theme="wikipedia"] .article-body tr:nth-child(even) td { background: #f8f9fa; }
+
+/* Horizontal rule */
+html[data-theme="wikipedia"] .article-body hr {
+  border-top: 1px solid #a2a9b1;
+}
+
+/* ---- TOC ---- */
+html[data-theme="wikipedia"] .toc {
+  background: #f8f9fa;
+  border: 1px solid #a2a9b1;
+  border-radius: 2px;
+  box-shadow: none;
+}
+html[data-theme="wikipedia"] .toc-title {
+  font-family: "Linux Libertine", Georgia, serif;
+  font-size: 0.9375rem;
+  font-weight: bold;
+  color: #202122;
+  border-bottom-color: #a2a9b1;
+}
+html[data-theme="wikipedia"] .toc a { color: #3366cc; }
+html[data-theme="wikipedia"] .toc a:hover { color: #447ff5; text-decoration: underline; }
+html[data-theme="wikipedia"] .toc a.toc-active { color: #3366cc; font-weight: bold; }
+
+/* ---- Infobox ---- */
+html[data-theme="wikipedia"] .article-infobox {
+  background: #f8f9fa;
+  border: 1px solid #a2a9b1;
+  border-radius: 2px;
+  box-shadow: none;
+  font-size: 0.8125rem;
+}
+html[data-theme="wikipedia"] .article-infobox th {
+  color: #202122;
+  font-weight: normal;
+  background: transparent;
+}
+html[data-theme="wikipedia"] .article-infobox th,
+html[data-theme="wikipedia"] .article-infobox td {
+  border-bottom: 1px solid #eaecf0;
+}
+html[data-theme="wikipedia"] .article-infobox tr:last-child th,
+html[data-theme="wikipedia"] .article-infobox tr:last-child td { border-bottom: none; }
+
+/* ---- Breadcrumb / tags ---- */
+html[data-theme="wikipedia"] .breadcrumb { color: #54595d; }
+html[data-theme="wikipedia"] .breadcrumb a { color: #3366cc; }
+html[data-theme="wikipedia"] .tag {
+  background: #eaecf0;
+  border-color: #a2a9b1;
+  color: #3366cc;
+  border-radius: 2px;
+}
+html[data-theme="wikipedia"] .tag:hover { background: #eaf3ff; border-color: #3366cc; color: #3366cc; }
+
+/* ---- Home page cards ---- */
+html[data-theme="wikipedia"] .home-section {
+  background: #ffffff;
+  border: 1px solid #a2a9b1;
+  border-radius: 2px;
+  box-shadow: none;
+}
+html[data-theme="wikipedia"] .home-section-header {
+  background: #eaecf0;
+  border-bottom: 1px solid #a2a9b1;
+  border-radius: 2px 2px 0 0;
+}
+html[data-theme="wikipedia"] .home-section-title { color: #000000; }
+
+html[data-theme="wikipedia"] .featured-concept {
+  background: #ffffff;
+  border: 1px solid #a2a9b1;
+  border-radius: 2px;
+  box-shadow: none;
+}
+html[data-theme="wikipedia"] .featured-label { color: #54595d; }
+html[data-theme="wikipedia"] .featured-title { color: #000000; font-family: "Linux Libertine", Georgia, serif; }
+html[data-theme="wikipedia"] .featured-excerpt { color: #202122; }
+
+html[data-theme="wikipedia"] .moc-card {
+  background: #ffffff;
+  border: 1px solid #a2a9b1;
+  border-radius: 2px;
+  box-shadow: none;
+}
+html[data-theme="wikipedia"] .moc-card:hover { background: #eaecf0; box-shadow: none; }
+html[data-theme="wikipedia"] .moc-card-title { color: #3366cc; }
+
+html[data-theme="wikipedia"] .portal-card {
+  background: #ffffff;
+  border: 1px solid #a2a9b1;
+  border-radius: 2px;
+  box-shadow: none;
+}
+html[data-theme="wikipedia"] .portal-card:hover { background: #eaecf0; box-shadow: none; }
+html[data-theme="wikipedia"] .portal-card-title { color: #000000; }
+html[data-theme="wikipedia"] .portal-card-desc { color: #54595d; }
+
+/* ---- Index hero ---- */
+html[data-theme="wikipedia"] .index-hero {
+  background: #eaf3ff;
+  box-shadow: none;
+  border: 1px solid #a7d7f9;
+  border-radius: 2px;
+}
+/* All white-on-dark text inside hero must flip to dark-on-light */
+html[data-theme="wikipedia"] .index-hero-eyebrow { color: #54595d; }
+html[data-theme="wikipedia"] .index-hero-title   { color: #000000; font-family: "Linux Libertine", Georgia, serif; }
+html[data-theme="wikipedia"] .index-hero-desc    { color: #54595d; }
+html[data-theme="wikipedia"] .index-stat         { color: #54595d; }
+html[data-theme="wikipedia"] .index-stat strong  { color: #202122; }
+
+/* Domain cards inside the hero */
+html[data-theme="wikipedia"] .domain-card {
+  background: #ffffff;
+  border: 1px solid #a2a9b1;
+  border-radius: 2px;
+}
+html[data-theme="wikipedia"] .domain-card:hover { background: #eaecf0; }
+html[data-theme="wikipedia"] .domain-title,
+html[data-theme="wikipedia"] .domain-title:visited,
+html[data-theme="wikipedia"] .domain-title:hover { color: #3366cc; }
+html[data-theme="wikipedia"] .domain-links a,
+html[data-theme="wikipedia"] .domain-links a:visited { color: #3366cc; }
+html[data-theme="wikipedia"] .domain-links a:hover   { color: #447ff5; text-decoration: underline; }
+
+html[data-theme="wikipedia"] .index-hero-btn {
+  background: #3366cc;
+  color: #ffffff;
+  border-radius: 2px;
+  box-shadow: none;
+}
+html[data-theme="wikipedia"] .index-hero-btn:hover { background: #2a55b0; color: #ffffff; text-decoration: none; }
+
+/* ---- Browse / search results ---- */
+html[data-theme="wikipedia"] .browse-result-item {
+  background: #ffffff;
+  border: 1px solid #a2a9b1;
+  border-radius: 2px;
+  box-shadow: none;
+}
+html[data-theme="wikipedia"] .browse-result-item:hover { background: #eaecf0; box-shadow: none; }
+html[data-theme="wikipedia"] .browse-result-title { color: #3366cc; }
+html[data-theme="wikipedia"] .browse-result-excerpt { color: #54595d; }
+
+/* ---- Right-pane tabs ---- */
+html[data-theme="wikipedia"] .pane-tab {
+  color: #3366cc;
+  border-radius: 2px 2px 0 0;
+}
+html[data-theme="wikipedia"] .pane-tab.active {
+  color: #202122;
+  border-bottom-color: #ffffff;
+  background: #ffffff;
+}
+html[data-theme="wikipedia"] .pane-tab:hover { background: #eaecf0; }
+
+/* ---- Footer ---- */
+html[data-theme="wikipedia"] .site-footer {
+  background: #f8f9fa;
+  border-top: 1px solid #a2a9b1;
+  color: #54595d;
+}
+html[data-theme="wikipedia"] .site-footer a { color: #3366cc; }
