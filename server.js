@@ -20,6 +20,8 @@ import { loadCanvases } from './src/vault/canvas.js';
 import excalidrawRouter from './src/routes/excalidrawRoute.js';
 import { loadExcalidrawFiles } from './src/vault/excalidraw.js';
 import readwiseRouter from './src/routes/readwiseRoute.js';
+import flipbookRouter from './src/routes/flipbookRoute.js';
+import { CACHE_DIR as FLIPBOOK_CACHE_DIR } from './src/services/flipbook.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -31,6 +33,13 @@ app.use(express.json({ limit: '10mb' }));
 app.use('/public', express.static(join(__dirname, 'public')));
 app.use('/assets', express.static(join(VAULT_PATH, 'Assets')));
 app.use('/vault', express.static(VAULT_PATH));
+app.use('/flipbook-cache', express.static(FLIPBOOK_CACHE_DIR, {
+  etag: false,
+  lastModified: false,
+  setHeaders(res) {
+    res.setHeader('Cache-Control', 'no-cache');
+  },
+}));
 
 // Routes
 app.use(homeRouter);
@@ -43,6 +52,7 @@ app.use(graphRouter);
 app.use(canvasRouter);
 app.use(excalidrawRouter);
 app.use(readwiseRouter);
+app.use(flipbookRouter);
 
 // Debounced vault watcher
 let rebuildTimer = null;

@@ -67,6 +67,7 @@ Designed for vaults that grow into the hundreds or thousands of files, with mixe
 - **Knowledge Graph** — force-directed D3 graph of all wikilink connections; color-coded by section; searchable; draggable nodes
 - **Canvas Viewer** — renders Obsidian `.canvas` files as interactive pan/zoom diagrams
 - **Excalidraw Viewer** — renders `.excalidraw` JSON files as SVG; supports rectangles, ellipses, diamonds, arrows, text, pan/zoom
+- **Flipbook (generative pixel UI)** — flipbook.page-style infinite visual browser, vault-grounded. See [Flipbook](#flipbook-generative-pixel-ui) below.
 
 ### Readwise Integration
 - **Live Reader API** — connects to Readwise API v3 (`GET /list`) when `READWISE_TOKEN` is set in `.env`; graceful fallback to vault files
@@ -217,6 +218,43 @@ npm run dev
 ```
 
 > Vault file changes (editing markdown) are picked up immediately via chokidar — no restart needed. Only changes to source code require `npm run dev` reload.
+
+---
+
+## Flipbook (Generative Pixel UI)
+
+`/flipbook/:slug` is an experimental, [flipbook.page](https://flipbook.page)-style visual browser for any vault article. It renders a local SVG "pixel UI" frame from your vault graph: a center topic card, surrounding concept cards, curved edges, and deterministic click regions. No image model is required for the base experience.
+
+### How to use it
+
+- From any wiki article, click the **Flipbook** button next to the section badge.
+- Or open it directly: `http://localhost:3000/flipbook/agent-memory`.
+- Click outer concept cards to jump to real vault articles.
+- Click the center card to recursively explore the next set of related concepts. The previous frame is kept on a Back stack.
+
+### Provider: local SVG
+
+The Flipbook UI is rendered locally. It does not call fal.ai, Gemini, or any other model in the blocking path.
+
+```env
+FLIPBOOK_PROVIDER=local-svg
+```
+
+`FAL_KEY` can still exist in your private `.env`; it is ignored by the base Flipbook renderer and reserved for a future optional AI enhancer.
+
+### Caching
+
+Frame JSON is cached on disk under `public/flipbook-cache/<key>.frame.json`:
+
+- **Root pages** are keyed by `sha1(slug + mtime)` — editing the source markdown automatically invalidates the cache on next visit.
+- **Explore pages** are keyed by `sha1(parentKey + click coords + concept)` so the same click reproduces the same image.
+- The cache directory is gitignored. Delete it any time to regenerate.
+
+### Risks / known issues
+
+1. **Not official flipbook.page** — it reproduces the interaction pattern, not the closed service.
+2. **Graph quality depends on vault links** — articles with rich wikilinks/backlinks get better surrounding cards.
+3. **Local SVG is deterministic** — less visually magical than AI image generation, but fast, readable, and reliable.
 
 ---
 

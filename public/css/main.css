@@ -350,6 +350,27 @@ ul, ol { padding-left: 1.5em; }
   letter-spacing: 0.02em;
   color: var(--text-muted);
 }
+.article-flipbook-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  padding: 3px 9px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--blue);
+  background: var(--blue-light);
+  border: 1px solid rgba(26,86,219,.18);
+  border-radius: var(--radius-xs);
+  text-decoration: none;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.article-flipbook-btn:hover {
+  background: var(--blue);
+  color: #fff;
+  border-color: var(--blue);
+  text-decoration: none;
+}
 
 /* ===== ARTICLE TWO-COLUMN LAYOUT ===== */
 .article-layout {

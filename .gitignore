@@ -20,3 +20,6 @@ screenshot-*.png
 # Logs
 *.log
 npm-debug.log*
+
+# Flipbook generated images + prompts (regenerate on demand)
+public/flipbook-cache/
