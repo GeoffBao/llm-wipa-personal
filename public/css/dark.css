@@ -75,15 +75,17 @@ html[data-theme="dark"] .toc { background: #141621; }
 
 /* INDEX hero — slightly less saturated in dark, keeps amber identity */
 html[data-theme="dark"] .index-hero {
-  background: linear-gradient(135deg, #3a1d08 0%, #5a2f0c 50%, #7a4214 100%);
-  box-shadow: 0 4px 20px rgba(0,0,0,0.35);
+  background:
+    radial-gradient(circle at 82% 22%, rgba(244,184,93,0.18), transparent 32%),
+    linear-gradient(135deg, #17100d 0%, #382015 48%, #704018 100%);
+  box-shadow: 0 18px 45px rgba(0,0,0,0.38);
 }
 html[data-theme="dark"] .index-hero-btn {
-  background: var(--blue);
-  color: #0f1014;
-  box-shadow: 0 2px 8px rgba(184,192,255,0.25);
+  background: #f4d7aa;
+  color: #25150b;
+  box-shadow: 0 10px 24px rgba(0,0,0,0.25);
 }
-html[data-theme="dark"] .index-hero-btn:hover { background: var(--blue-hover); color: #0f1014; }
+html[data-theme="dark"] .index-hero-btn:hover { background: #fff0d8; color: #25150b; }
 
 /* Article code blocks */
 html[data-theme="dark"] .article-body pre { background: #0a0b0f; box-shadow: none; border: 1px solid var(--border-light); }

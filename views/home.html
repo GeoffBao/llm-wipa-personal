@@ -2,6 +2,9 @@
 
   <!-- Wiki Index Hero -->
   <div class="index-hero">
+    <div class="index-hero-art" aria-hidden="true">
+      <img src="/public/images/home-hero-still-life.png" alt="">
+    </div>
     <div class="index-hero-left">
       <div class="index-hero-eyebrow">Knowledge Index</div>
       <h2 class="index-hero-title">Wiki Index</h2>
@@ -11,7 +14,10 @@
         <span class="index-stat"><strong>{{totalSources}}</strong> sources</span>
         <span class="index-stat"><strong>{{totalBooks}}</strong> books</span>
       </div>
-      <a href="/wiki/wiki-index" class="index-hero-btn">Browse Full Index →</a>
+      <div class="index-hero-actions">
+        <a href="/wiki/wiki-index" class="index-hero-btn">Browse Full Index →</a>
+        <a href="/readwise/chat" class="index-hero-btn index-hero-btn--ghost">Readwise Chat</a>
+      </div>
     </div>
     <div class="index-domains">
       {{{indexNav}}}

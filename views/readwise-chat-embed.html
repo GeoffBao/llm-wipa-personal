@@ -1,0 +1,19 @@
+<div class="rw-chat-embed-page">
+  <div class="rw-chat-embed-toolbar">
+    <div class="rw-chat-embed-toolbar-left">
+      <strong class="rw-chat-embed-title">Readwise Chat</strong>
+      <p class="rw-chat-embed-note">Readwise 对 <code>readwise.io</code> 使用 <code>X-Frame-Options: DENY</code> 与 CSP <code>frame-ancestors 'self'</code>，因此<strong>无法</strong>在任意第三方站点（含本机 LLM KB）的 iframe 里真正渲染他们的 Chat 页面；下方内嵌区域在浏览器里通常会保持空白。侧栏仍是本站导航，请用右侧按钮在 Readwise 站内使用。</p>
+    </div>
+    <div class="rw-chat-embed-toolbar-actions">
+      <a class="rw-chat-embed-btn rw-chat-embed-btn--primary" href="{{{readwiseChatUrl}}}" target="_blank" rel="noopener noreferrer">新标签打开</a>
+      <a class="rw-chat-embed-btn" href="{{{readwiseChatUrl}}}">当前窗口打开</a>
+    </div>
+  </div>
+  <iframe
+    class="rw-chat-embed-frame"
+    title="Readwise Chat (may be blocked)"
+    src="{{{readwiseChatUrl}}}"
+    allow="clipboard-read; clipboard-write; fullscreen"
+    referrerpolicy="strict-origin-when-cross-origin"
+  ></iframe>
+</div>

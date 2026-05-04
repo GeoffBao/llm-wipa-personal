@@ -33,7 +33,7 @@ const wikilinkExtension = {
     if (resolved.resolved) {
       return `<a href="${resolved.href}" class="wikilink">${escapeHtml(resolved.display)}</a>`;
     }
-    return `<a class="wikilink wikilink-missing" title="页面不存在">${escapeHtml(resolved.display)}</a>`;
+    return `<a href="${resolved.href}" class="wikilink wikilink-missing" title="页面不存在，点击查看建议">${escapeHtml(resolved.display)}</a>`;
   },
 };
 

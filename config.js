@@ -1,6 +1,9 @@
 export const VAULT_PATH = process.env.VAULT_PATH || '';
 export const PORT = parseInt(process.env.PORT || '3000', 10);
 
+/** Readwise Chat web URL (embed + open links). Set READWISE_CHAT_URL in .env to deep-link a conversation. */
+export const READWISE_CHAT_URL = process.env.READWISE_CHAT_URL || 'https://readwise.io/chat';
+
 // Subdirectories under VAULT_PATH/Wiki/ to index
 export const WIKI_SECTIONS = ['concepts', 'sources', 'mocs', 'synthesis', 'prompts', 'people'];
 
