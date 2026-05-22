@@ -175,11 +175,16 @@
         btn.addEventListener('click', function () { window.__setTheme?.(this.dataset.t); });
       });
     })();
-    window.addEventListener('load', () => {
-      if (window.mermaid) {
-        const dark = document.documentElement.getAttribute('data-theme') === 'dark';
-        mermaid.initialize({ startOnLoad: true, theme: dark ? 'dark' : 'default' });
-      }
+    window.addEventListener('load', async () => {
+      if (!window.mermaid) return;
+      const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+      mermaid.initialize({
+        startOnLoad: false,
+        theme: dark ? 'dark' : 'default',
+        securityLevel: 'loose',
+      });
+      const nodes = document.querySelectorAll('.article-body .mermaid, .mermaid');
+      if (nodes.length) await mermaid.run({ nodes });
     });
   </script>
 </body>

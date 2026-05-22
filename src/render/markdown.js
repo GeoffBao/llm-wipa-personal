@@ -14,10 +14,33 @@ const highlightPlugin = markedHighlight({
   emptyLangClass: 'hljs',
   langPrefix: 'hljs language-',
   highlight(code, lang) {
+    if (lang === 'mermaid' || lang === 'mmd') return code;
     const language = hljs.getLanguage(lang) ? lang : 'plaintext';
     return hljs.highlight(code, { language }).value;
   },
 });
+
+const renderHighlightedCode = highlightPlugin.renderer.code.bind(highlightPlugin.renderer);
+
+function isMermaidLang(lang) {
+  const language = (lang || '').match(/\S*/)?.[0];
+  return language === 'mermaid' || language === 'mmd';
+}
+
+function buildMermaidRenderer(fallbackCodeRenderer) {
+  return {
+    code(token) {
+      const text = typeof token === 'object' ? token.text : token;
+      const lang = typeof token === 'object' ? token.lang : arguments[1];
+      if (isMermaidLang(lang)) {
+        return `<div class="mermaid-wrap"><pre class="mermaid">${text.replace(/\n$/, '')}</pre></div>\n`;
+      }
+      return fallbackCodeRenderer(token);
+    },
+  };
+}
+
+const mermaidPlugin = { renderer: buildMermaidRenderer(renderHighlightedCode) };
 
 // Wikilink inline extension: [[...]]
 const wikilinkExtension = {
@@ -71,9 +94,6 @@ function buildEmbedExtension(fileDir = null) {
   };
 }
 
-// No-context version (used when filePath is unknown)
-const embedExtension = buildEmbedExtension(null);
-
 const baseRenderer = {
   heading({ text, depth }) {
     const id = text
@@ -112,18 +132,23 @@ function buildImageRenderer(fileDir) {
   };
 }
 
+function buildMarkedInstance(fileDir = null) {
+  const instance = new Marked(highlightPlugin);
+  instance.use(mermaidPlugin);
+  instance.use({ extensions: [wikilinkExtension, buildEmbedExtension(fileDir)] });
+  const renderer = fileDir
+    ? { ...baseRenderer, ...buildImageRenderer(fileDir) }
+    : baseRenderer;
+  instance.use({ renderer });
+  return instance;
+}
+
 // Default global instance (no file-path context)
-const marked = new Marked(highlightPlugin);
-marked.use({ extensions: [wikilinkExtension, embedExtension] });
-marked.use({ renderer: baseRenderer });
+const marked = buildMarkedInstance(null);
 
 export function renderMarkdown(markdown, filePath = null) {
   if (filePath) {
-    const fileDir = dirname(filePath);
-    const instance = new Marked(highlightPlugin);
-    instance.use({ extensions: [wikilinkExtension, buildEmbedExtension(fileDir)] });
-    instance.use({ renderer: { ...baseRenderer, ...buildImageRenderer(fileDir) } });
-    return instance.parse(markdown);
+    return buildMarkedInstance(dirname(filePath)).parse(markdown);
   }
   return marked.parse(markdown);
 }
