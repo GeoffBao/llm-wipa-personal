@@ -22,7 +22,7 @@
     { id: 'go-excalidraw', title: 'Open Excalidraw',          icon: 'canvas', action: () => nav('/excalidraw') },
     { id: 'go-readwise',   title: 'Open Readwise Dashboard',  icon: 'book',   action: () => nav('/readwise') },
     { id: 'go-readwise-chat', title: 'Open Readwise Chat', icon: 'book', action: () => nav('/readwise/chat') },
-    { id: 'go-reading',    title: 'Open Reading Shelf',       icon: 'book',   action: () => nav('/reading') },
+    { id: 'go-books',      title: 'Open Books',               icon: 'book',   action: () => nav('/books') },
     { id: 'go-concepts',   title: 'Browse Concepts',          icon: 'note',   action: () => nav('/browse/concepts') },
     { id: 'go-sources',    title: 'Browse Sources',           icon: 'note',   action: () => nav('/browse/sources') },
     { id: 'random',        title: 'Random Concept',           icon: 'dice',   action: async () => {

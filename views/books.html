@@ -1,10 +1,10 @@
-<div class="library-page">
+<div class="books-page">
 
   <!-- Header -->
-  <div class="lib-header">
-    <div class="lib-header-title">
+  <div class="books-header">
+    <div class="books-header-title">
       <svg style="width:22px;height:22px;vertical-align:-4px;margin-right:8px;opacity:.75;flex-shrink:0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 0 3-3h7z"/></svg>
-      <h1 class="page-title" style="display:inline">Library</h1>
+      <h1 class="page-title" style="display:inline">Books</h1>
     </div>
     <div class="rw-header-actions">
       <a href="https://weread.qq.com" target="_blank" rel="noopener" class="rw-open-btn rw-chat-btn">
@@ -17,7 +17,7 @@
       </a>
     </div>
   </div>
-  <div class="lib-header-stats">
+  <div class="books-header-stats">
     <span class="rw-hstat"><strong>{{totalBooks}}</strong> books</span>
     <span class="rw-hstat-sep">·</span>
     <span class="rw-hstat">{{totalFinished}} finished</span>
@@ -28,19 +28,17 @@
   </div>
 
   <!-- Heatmap -->
-  <div class="rw-dashboard" style="margin-bottom:1rem">
+  <div class="rw-dashboard" style="margin-bottom:1.5rem">
     <div class="rw-dashboard-main" style="width:100%">
       <div class="rw-dashboard-label">Reading activity — past year</div>
       {{{heatmapHtml}}}
     </div>
   </div>
 
-  <!-- Tabs + Grid -->
+  <!-- Source tabs -->
   <div class="lib-tabs">{{{tabsHtml}}}</div>
 
-  <div class="lib-grid">
-    {{{booksHtml}}}
-    {{{emptyHtml}}}
-  </div>
+  <!-- Year-grouped book list -->
+  {{{groupsHtml}}}
 
 </div>

@@ -31,8 +31,8 @@ async function loadReadwiseBooks() {
         cover:       a.imageUrl || '',
         progressPct: Math.round((a.progress || 0) * 100),
         source:      'readwise',
-        category:    'Readwise',
         noteCount:   0,
+        reviewCount: 0,
         lastReadDate: (a.updatedAt || a.savedAt || '').slice(0, 10),
         url:         a.url,
         isFinished:  (a.progress || 0) >= 0.9,
@@ -57,7 +57,6 @@ function loadWeReadBooks() {
       cover:       m.cover instanceof Date ? '' : String(m.cover || ''),
       progressPct,
       source:      'weread',
-      category:    book.category || '未分类',
       noteCount:   m.noteCount || 0,
       reviewCount: m.reviewCount || 0,
       readingTime: String(m.readingTime || m.readingtime || ''),
@@ -135,54 +134,72 @@ function renderHeatmap(books) {
   </div>`;
 }
 
-// ── Book card renderer ─────────────────────────────────────────────────────────
+// ── Horizontal book card ───────────────────────────────────────────────────────
 function renderBookCard(book) {
   const coverHtml = book.cover
-    ? `<img src="${book.cover}" alt="${book.title}" class="lib-book-cover" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
+    ? `<img src="${book.cover}" alt="" class="bk-cover" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
     : '';
-  const placeholderHtml = `<div class="lib-book-cover lib-book-cover-placeholder" style="${book.cover ? 'display:none' : ''}">${book.title.slice(0, 2)}</div>`;
+  const phHtml = `<div class="bk-cover bk-cover-ph" style="${book.cover ? 'display:none' : ''}">${book.title.slice(0, 2)}</div>`;
 
-  const sourceBadge = book.source === 'weread'
-    ? `<span class="lib-source-badge lib-source-weread">微信读书</span>`
-    : `<span class="lib-source-badge lib-source-readwise">Readwise</span>`;
-
-  const finishedBadge = book.isFinished
-    ? `<span class="lib-done-badge">✓</span>` : '';
-
-  const progressBar = book.progressPct > 0
-    ? `<div class="lib-progress-wrap"><div class="lib-progress-bar" style="width:${book.progressPct}%"></div></div>
-       <span class="lib-progress-text">${book.progressPct}%</span>`
+  const syncBadge = book.isLocal
+    ? `<span class="bk-badge bk-badge-sync">已同步</span>`
     : '';
 
-  const notesHtml = book.noteCount > 0
-    ? `<span class="lib-notes-count">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:10px;height:10px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-        ${book.noteCount}
-       </span>` : '';
+  const srcBadge = !book.isLocal && book.source === 'readwise'
+    ? `<span class="bk-badge bk-badge-rw">Readwise</span>`
+    : '';
 
-  const timeHtml = book.readingTime
-    ? `<span class="lib-read-time">${book.readingTime}</span>` : '';
+  const typeBadge = `<span class="bk-badge bk-badge-type">图书</span>`;
+
+  const statusBadge = book.isFinished
+    ? `<span class="bk-badge bk-badge-done">已读</span>`
+    : `<span class="bk-badge bk-badge-reading">在读</span>`;
+
+  const statsHtml = `<div class="bk-stats">划线 ${book.noteCount || 0} · 想法 ${book.reviewCount || 0}</div>`;
+
+  const dateHtml = book.lastReadDate
+    ? `<div class="bk-date">最近阅读 ${book.lastReadDate}</div>`
+    : '';
 
   const target = book.isLocal ? '' : ' target="_blank" rel="noopener"';
 
-  return `<a href="${book.url}"${target} class="lib-book-card">
-    <div class="lib-book-cover-wrap">
-      ${coverHtml}${placeholderHtml}
-      ${finishedBadge}
-      ${sourceBadge}
-    </div>
-    <div class="lib-book-info">
-      <div class="lib-book-title">${book.title}</div>
-      <div class="lib-book-author">${book.author}</div>
-      <div class="lib-book-progress">${progressBar}</div>
-      <div class="lib-book-foot">${notesHtml}${timeHtml}</div>
+  return `<a href="${book.url}"${target} class="bk-card">
+    <div class="bk-cover-wrap">${coverHtml}${phHtml}</div>
+    <div class="bk-body">
+      <div class="bk-title">${book.title}</div>
+      ${book.author ? `<div class="bk-author">${book.author}</div>` : ''}
+      <div class="bk-badges">${syncBadge}${srcBadge}${typeBadge}${statusBadge}</div>
+      ${statsHtml}${dateHtml}
     </div>
   </a>`;
 }
 
+// ── Year-grouped sections ──────────────────────────────────────────────────────
+function renderGroups(books) {
+  if (books.length === 0) return '<div class="bk-empty">No books found.</div>';
+
+  const yearMap = new Map();
+  for (const b of books) {
+    const y = b.lastReadDate ? b.lastReadDate.slice(0, 4) : '其他';
+    if (!yearMap.has(y)) yearMap.set(y, []);
+    yearMap.get(y).push(b);
+  }
+
+  return [...yearMap.entries()]
+    .sort((a, b) => b[0].localeCompare(a[0]))
+    .map(([year, yearBooks]) => {
+      yearBooks.sort((a, b) => (b.lastReadDate || '').localeCompare(a.lastReadDate || ''));
+      return `
+      <div class="bk-year-section">
+        <div class="bk-year-heading">${year === '其他' ? '其他' : year + ' 年'}</div>
+        <div class="bk-year-grid">${yearBooks.map(renderBookCard).join('')}</div>
+      </div>`;
+    }).join('');
+}
+
 // ── Routes ─────────────────────────────────────────────────────────────────────
 
-router.get('/library', async (req, res) => {
+router.get('/books', async (req, res) => {
   const sourceFilter = req.query.src || 'all';
 
   const [wereadBooks, readwiseBooks] = await Promise.all([
@@ -219,12 +236,12 @@ router.get('/library', async (req, res) => {
     `<a href="?src=${src}" class="lib-tab${sourceFilter === src ? ' active' : ''}">${label} <span class="lib-tab-count">${count}</span></a>`
   ).join('');
 
-  const booksHtml = filtered.map(renderBookCard).join('');
-  const heatmapHtml = renderHeatmap(wereadBooks); // WeRead has more accurate lastReadDate
+  const groupsHtml = renderGroups(filtered);
+  const heatmapHtml = renderHeatmap(wereadBooks);
 
-  res.send(await render('library.html', {
-    pageTitle:      'Library — LLM KB',
-    activeNav:      'library',
+  res.send(await render('books.html', {
+    pageTitle:      'Books — LLM KB',
+    activeNav:      'books',
     totalBooks:     dedupedBooks.length,
     totalFinished,
     totalNotes,
@@ -232,15 +249,14 @@ router.get('/library', async (req, res) => {
     readwiseCount:  readwiseBooks.length,
     heatmapHtml,
     tabsHtml,
-    booksHtml,
-    emptyHtml:      filtered.length === 0 ? '<div class="lib-empty">No books found.</div>' : '',
+    groupsHtml,
   }));
 });
 
-// Keep /reading redirect for backwards compat
-router.get('/reading', (req, res) => res.redirect('/library'));
+// Backwards-compat redirects
+router.get('/library', (req, res) => res.redirect('/books'));
 
-// Individual book page (unchanged, keep at /reading/:slug)
+// Individual book page at /reading/:slug
 router.get('/reading/:slug', async (req, res) => {
   const { getAllBooks, getBook } = await import('../vault/loader.js');
   const book = getBook('reading-' + req.params.slug) || getBook(req.params.slug);
@@ -264,7 +280,7 @@ router.get('/reading/:slug', async (req, res) => {
     pageTitle:    `${book.title} — LLM KB`,
     title:        book.title,
     sectionLabel: '微信读书',
-    breadcrumb:   `<a href="/">Home</a> › <a href="/library">Library</a> › ${book.title}`,
+    breadcrumb:   `<a href="/">Home</a> › <a href="/books">Books</a> › ${book.title}`,
     infobox,
     toc:          '',
     content:      html,
@@ -273,7 +289,7 @@ router.get('/reading/:slug', async (req, res) => {
     updatedAt:    String(m.lastReadDate || m.lastreaddate || ''),
     hideFlipbook: true,
     hideGraph:    true,
-    activeNav:    'library',
+    activeNav:    'books',
   }));
 });
 
