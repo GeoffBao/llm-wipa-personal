@@ -24,3 +24,14 @@
     {{{emptyHtml}}}
   </div>
 </div>
+
+<script>
+async function rwSync(incremental) {
+  const btn = document.getElementById(incremental ? 'rw-sync-inc-btn' : 'rw-sync-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '↻ Syncing…'; }
+  try {
+    await fetch('/api/readwise/sync' + (incremental ? '?mode=incremental' : ''), { method: 'POST' });
+  } catch (e) {}
+  setTimeout(() => location.reload(), 3000);
+}
+</script>

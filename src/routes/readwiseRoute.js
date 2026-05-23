@@ -1,23 +1,22 @@
 import { Router } from 'express';
-import { readdir, readFile, writeFile } from 'fs/promises';
+import { readdir, readFile } from 'fs/promises';
 import { join } from 'path';
-import { tmpdir } from 'os';
+import { spawn } from 'child_process';
+import { dirname } from 'path';
+import { fileURLToPath } from 'url';
 import { render } from '../render/template.js';
 import { VAULT_PATH, READWISE_CHAT_URL } from '../../config.js';
 import yaml from 'js-yaml';
 
 const router = Router();
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const READWISE_TOKEN = () => process.env.READWISE_TOKEN || '';
-const READWISE_DIR   = () => join(VAULT_PATH, 'Raw', 'readwise');
+const READWISE_DIR  = () => join(VAULT_PATH, 'Raw', 'readwise');
+const SYNC_FILE     = () => join(VAULT_PATH, 'Raw', 'readwise-sync-data.json');
+const SYNC_SCRIPT   = join(__dirname, '../../scripts/sync-readwise.js');
 
-// ── In-memory cache ───────────────────────────────────────────────────────────
-let _cache = null;
-let _cacheAt = 0;
-let _rateLimitUntil = 0;  // don't hit API again until this timestamp
-const CACHE_TTL      = 5 * 60 * 1000;   // 5 min normal TTL
-const RATE_LIMIT_TTL = 15 * 60 * 1000;  // 15 min backoff after 429
-const DISK_CACHE     = join(tmpdir(), 'llm-wipa-readwise-cache.json');
+// Track in-progress sync so the UI can show spinner
+let _syncRunning = false;
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const CAT_LABELS = {
@@ -65,99 +64,24 @@ function progressBar(pct) {
   return `<div class="rw-progress-wrap"><div class="rw-progress-bar" style="width:${w}%"></div></div>`;
 }
 
-// ── API loader ────────────────────────────────────────────────────────────────
-async function loadDiskCache() {
+// ── Primary data source: sync file written by scripts/sync-readwise.js ────────
+async function loadSyncFile() {
   try {
-    const raw = await readFile(DISK_CACHE, 'utf8');
-    const { articles, savedAt } = JSON.parse(raw);
-    return { articles, savedAt };
+    const raw = await readFile(SYNC_FILE(), 'utf8');
+    return JSON.parse(raw);
   } catch {
     return null;
   }
 }
 
-async function saveDiskCache(articles) {
-  try {
-    await writeFile(DISK_CACHE, JSON.stringify({ articles, savedAt: Date.now() }), 'utf8');
-  } catch { /* non-fatal */ }
-}
-
-async function fetchFromAPI() {
-  const now = Date.now();
-
-  // Memory cache still fresh
-  if (_cache && now - _cacheAt < CACHE_TTL) return _cache;
-
-  // Rate-limited — don't retry yet, serve from memory or disk
-  if (now < _rateLimitUntil) {
-    if (_cache) return _cache;
-    const disk = await loadDiskCache();
-    if (disk) { _cache = disk.articles; _cacheAt = disk.savedAt; return _cache; }
-    throw new Error('Readwise API rate limited — no cached data available');
-  }
-
-  const articles = [];
-  let cursor = null;
-
-  do {
-    const url = new URL('https://readwise.io/api/v3/list/');
-    url.searchParams.set('withHtmlContent', 'false');
-    if (cursor) url.searchParams.set('pageCursor', cursor);
-
-    const resp = await fetch(url.toString(), {
-      headers: { Authorization: `Token ${READWISE_TOKEN()}` },
-    });
-
-    if (resp.status === 429) {
-      const retryAfter = parseInt(resp.headers.get('Retry-After') || '0', 10);
-      _rateLimitUntil = now + (retryAfter > 0 ? retryAfter * 1000 : RATE_LIMIT_TTL);
-      // Return stale memory cache, then disk cache, then throw
-      if (_cache) return _cache;
-      const disk = await loadDiskCache();
-      if (disk) { _cache = disk.articles; _cacheAt = disk.savedAt; return _cache; }
-      throw new Error(`Readwise API responded 429`);
-    }
-
-    if (!resp.ok) throw new Error(`Readwise API responded ${resp.status}`);
-    const data = await resp.json();
-    articles.push(...data.results);
-    cursor = data.nextPageCursor || null;
-  } while (cursor);
-
-  _cache = articles
-    .map(d => ({
-      id:        d.id,
-      title:     d.title || '(untitled)',
-      author:    d.author || '',
-      url:       `https://read.readwise.io/read/${d.id}`,
-      sourceUrl: d.source_url || d.url || '',
-      category:  (d.category || 'article').toLowerCase(),
-      location:  (d.location || 'inbox').toLowerCase(),
-      savedAt:   d.saved_at || d.created_at || '',
-      tags:      (d.tags || []).map(t => t.name),
-      domain:    extractDomain(d.source_url || d.url || ''),
-      progress:  typeof d.reading_progress === 'number' ? d.reading_progress : 0,
-      wordCount: d.word_count || 0,
-      summary:   d.summary || '',
-      imageUrl:  d.image_url || '',
-      source:    'api',
-    }))
-    .sort((a, b) => String(b.savedAt).localeCompare(String(a.savedAt)));
-
-  _cacheAt = now;
-  _rateLimitUntil = 0;
-  saveDiskCache(_cache);  // persist to disk (non-blocking)
-  return _cache;
-}
-
-// ── Vault fallback ────────────────────────────────────────────────────────────
+// ── Fallback: Obsidian-synced vault .md files ─────────────────────────────────
 function parseFrontmatter(content) {
   const m = content.match(/^---\n([\s\S]*?)\n---/);
   if (!m) return {};
   try { return yaml.load(m[1]) || {}; } catch { return {}; }
 }
 
-async function fetchFromVault() {
+async function loadFromVaultFiles() {
   const dir = READWISE_DIR();
   let files;
   try { files = await readdir(dir); } catch { return []; }
@@ -170,24 +94,43 @@ async function fetchFromVault() {
     if (!meta.title) continue;
     const cat = (meta.category || 'article').replace(/['"]/g, '').toLowerCase();
     articles.push({
-      id:       meta.id || file,
-      title:    meta.title,
-      author:   meta.author || '',
-      url:      meta.url || '',
+      id:        meta.id || file,
+      title:     meta.title,
+      author:    meta.author || '',
+      url:       meta.url || `https://read.readwise.io/read/${meta.id}`,
       sourceUrl: meta.source_url || '',
-      category: cat,
-      location: (meta.location || 'later').toLowerCase(),
-      savedAt:  meta.saved_at || '',
-      tags:     Array.isArray(meta.tags) ? meta.tags : [],
-      domain:   extractDomain(meta.source_url || meta.url || ''),
-      progress: 0,
+      category:  cat,
+      location:  (meta.location || 'later').toLowerCase(),
+      savedAt:   meta.saved_at || '',
+      tags:      Array.isArray(meta.tags) ? meta.tags : [],
+      domain:    extractDomain(meta.source_url || meta.url || ''),
+      progress:  0,
       wordCount: meta.word_count || 0,
-      summary:  '',
-      imageUrl: '',
-      source:   'vault',
+      summary:   '',
+      imageUrl:  '',
     });
   }
   return articles.sort((a, b) => String(b.savedAt).localeCompare(String(a.savedAt)));
+}
+
+// ── Sync trigger (non-blocking) ───────────────────────────────────────────────
+function triggerSync(incremental = false) {
+  if (_syncRunning) return { started: false, reason: 'already running' };
+  _syncRunning = true;
+  const args = ['--env-file=.env', SYNC_SCRIPT];
+  if (incremental) args.push('--incremental');
+  const child = spawn(process.execPath, args, {
+    cwd: join(__dirname, '../..'),
+    detached: false,
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  child.stdout.on('data', d => process.stdout.write(`[sync-readwise] ${d}`));
+  child.stderr.on('data', d => process.stderr.write(`[sync-readwise] ${d}`));
+  child.on('close', code => {
+    _syncRunning = false;
+    console.log(`[sync-readwise] exited with code ${code}`);
+  });
+  return { started: true };
 }
 
 // ── Card renderer ─────────────────────────────────────────────────────────────
@@ -232,24 +175,23 @@ router.get('/readwise/chat', async (_req, res) => {
   }));
 });
 
+// ── Sync API endpoint ──────────────────────────────────────────────────────────
+router.post('/api/readwise/sync', (req, res) => {
+  const incremental = req.query.mode === 'incremental';
+  const result = triggerSync(incremental);
+  res.json({ ...result, incremental });
+});
+
 // ── Route ─────────────────────────────────────────────────────────────────────
 router.get('/readwise', async (req, res) => {
   const catFilter = req.query.cat || 'all';
   const locFilter = req.query.loc || 'all';
 
-  let articles, usingAPI = false, apiError = '';
-
-  if (READWISE_TOKEN()) {
-    try {
-      articles = await fetchFromAPI();
-      usingAPI = true;
-    } catch (err) {
-      apiError = err.message;
-      articles = await fetchFromVault();
-    }
-  } else {
-    articles = await fetchFromVault();
-  }
+  // Primary: sync JSON file; fallback: vault .md files
+  const syncData = await loadSyncFile();
+  const articles = syncData?.articles ?? await loadFromVaultFiles();
+  const syncedAt  = syncData?.syncedAt ?? null;
+  const syncMode  = syncData?.mode ?? 'vault';
 
   // Build unique categories/locations present
   const cats = [...new Set(articles.map(a => a.category))].sort();
@@ -277,20 +219,27 @@ router.get('/readwise', async (req, res) => {
     }),
   ].join('') : '';
 
-  const cacheAge = usingAPI && _cacheAt
-    ? Math.round((Date.now() - _cacheAt) / 1000)
-    : null;
+  function timeAgoLabel(iso) {
+    if (!iso) return '';
+    const secs = Math.round((Date.now() - new Date(iso)) / 1000);
+    if (secs < 60) return 'just now';
+    if (secs < 3600) return `${Math.floor(secs / 60)}m ago`;
+    if (secs < 86400) return `${Math.floor(secs / 3600)}h ago`;
+    return `${Math.floor(secs / 86400)}d ago`;
+  }
 
-  const is429 = apiError.includes('429');
-  const retryMins = is429 ? Math.ceil((_rateLimitUntil - Date.now()) / 60000) : 0;
-  const cacheSource = _cacheAt ? `cached ${Math.round((Date.now() - _cacheAt) / 1000)}s ago` : 'disk cache';
-  const statusHtml = apiError
-    ? is429
-      ? `<div class="rw-api-warn">⚠ Readwise API rate limited (429) — showing cached data · ${cacheSource}${retryMins > 0 ? ` · retry in ${retryMins}m` : ''} <button class="rw-refresh-btn" onclick="location.href='/readwise/refresh'">Retry now</button></div>`
-      : `<div class="rw-api-warn">⚠ API error: ${apiError} — showing vault data</div>`
-    : usingAPI
-      ? `<div class="rw-api-status">Live via Readwise API${cacheAge !== null ? ` · cached ${cacheAge}s ago` : ''} <button class="rw-refresh-btn" onclick="location.href='/readwise/refresh'">Refresh</button></div>`
-      : `<div class="rw-api-status rw-api-vault">Reading from vault · <a href="#setup">Add READWISE_TOKEN to .env</a> for live data</div>`;
+  const syncLabel = syncedAt ? `synced ${timeAgoLabel(syncedAt)}` : 'vault fallback';
+  const syncingSpinner = _syncRunning
+    ? `<span class="rw-sync-spinner">↻ Syncing…</span>`
+    : '';
+  const statusHtml = syncData
+    ? `<div class="rw-api-status">
+        ${syncingSpinner}
+        ${syncLabel} · ${syncData.totalCount} docs
+        <button class="rw-refresh-btn" id="rw-sync-btn" onclick="rwSync(false)">Sync now</button>
+        <button class="rw-refresh-btn" id="rw-sync-inc-btn" onclick="rwSync(true)">↑ Incremental</button>
+       </div>`
+    : `<div class="rw-api-warn">⚠ No sync data found — <button class="rw-refresh-btn" onclick="rwSync(false)">Run first sync</button></div>`;
 
   const inboxCount   = articles.filter(a => a.location === 'inbox' || a.location === 'new').length;
   const laterCount   = articles.filter(a => a.location === 'later' || a.location === 'shortlist').length;
@@ -328,11 +277,7 @@ router.get('/readwise', async (req, res) => {
   }));
 });
 
-// Bust cache and redirect
 router.get('/readwise/refresh', (req, res) => {
-  _cache = null;
-  _cacheAt = 0;
-  _rateLimitUntil = 0;
   res.redirect('/readwise');
 });
 
