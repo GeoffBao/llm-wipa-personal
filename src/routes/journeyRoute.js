@@ -38,7 +38,28 @@ function extractSections(raw) {
   const sections = [];
   for (const line of lines) {
     const m = line.match(/^##\s+(.+)/);
-    if (m) sections.push(m[1].trim());
+    if (!m) continue;
+    const full = m[1].trim();
+
+    // Extract time prefix like "22:00" or "17:30"
+    const timeMatch = full.match(/^(\d{1,2}:\d{2})\s+/);
+    const time = timeMatch ? timeMatch[1] : null;
+
+    // Extract backtick tag like `#meeting`
+    const tagMatch = full.match(/`#([\w-]+)`/);
+    const tag = tagMatch ? tagMatch[1] : null;
+
+    // Clean title: remove time prefix, [Craft Agent] noise, backtick tags
+    let title = full
+      .replace(/^\d{1,2}:\d{2}\s+/, '')
+      .replace(/\[Craft Agent\]\s*/i, '')
+      .replace(/\s*`#[\w-]+`/g, '')
+      .trim();
+
+    // If title has a person name repeated (e.g. "影像BSP工程师-鲁航 鲁航"), dedupe
+    title = title.replace(/^(.+?\S)\s+\1$/, '$1').trim();
+
+    sections.push({ time, tag, title, full });
   }
   return sections;
 }
@@ -66,16 +87,26 @@ router.get('/journey', async (req, res) => {
     byMonth.get(ym).push(entry);
   }
 
+  const TAG_LABELS = { meeting: '会议', memory: '记忆', 'journal-entry': '日记' };
+
   const monthsHtml = [...byMonth.entries()].map(([ym, monthEntries]) => {
     const items = monthEntries.map(entry => {
       const sections = extractSections(entry.raw);
-      const sectionPills = sections.slice(0, 4).map(s => {
-        const tagMatch = s.match(/`#([\w-]+)`/);
-        const tag = tagMatch ? tagMatch[1] : null;
-        const label = s.replace(/\s*`#[\w-]+`\s*/g, '').replace(/^\[Craft Agent\]\s*/i, '').trim();
-        return `<span class="journey-pill${tag ? ` journey-pill--${tag}` : ''}">${label || s}</span>`;
+
+      const sectionRows = sections.map(s => {
+        const tagBadge = s.tag
+          ? `<span class="journey-tag journey-tag--${s.tag}">${TAG_LABELS[s.tag] || s.tag}</span>`
+          : '';
+        const timeSpan = s.time
+          ? `<span class="journey-stime">${s.time}</span>`
+          : '';
+        return `
+          <div class="journey-section-item">
+            ${timeSpan}
+            <span class="journey-stitle">${s.title || s.full}</span>
+            ${tagBadge}
+          </div>`;
       }).join('');
-      const overflow = sections.length > 4 ? `<span class="journey-pill journey-pill--more">+${sections.length - 4}</span>` : '';
 
       return `
         <a href="/journey/${entry.date}" class="journey-entry-row">
@@ -84,8 +115,7 @@ router.get('/journey', async (req, res) => {
             <span class="journey-weekday">${new Date(entry.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short' })}</span>
           </div>
           <div class="journey-entry-body">
-            <div class="journey-entry-pills">${sectionPills}${overflow}</div>
-            ${sections.length === 0 ? '<span class="journey-empty">No entries</span>' : ''}
+            ${sectionRows || '<span class="journey-empty">No entries</span>'}
           </div>
         </a>`;
     }).join('');
