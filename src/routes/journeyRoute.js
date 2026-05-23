@@ -214,6 +214,8 @@ router.get('/journey/:date', async (req, res) => {
     backlinks: '',
     tagBadges: '',
     updatedAt: date,
+    hideFlipbook: true,
+    hideGraph: true,
     activeNav: 'journey',
   }));
 });
