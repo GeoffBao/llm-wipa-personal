@@ -68,16 +68,51 @@ function loadWeReadBooks() {
   });
 }
 
-// ── Heatmap: 52-week reading activity ─────────────────────────────────────────
-function renderHeatmap(books) {
+const WEREAD_HIGHLIGHT_RE = /⏱ (\d{4}-\d{2}-\d{2})/g;
+
+function extractHighlightDates(body) {
+  const dates = [];
+  if (!body) return dates;
+  let m;
+  while ((m = WEREAD_HIGHLIGHT_RE.exec(body)) !== null) dates.push(m[1]);
+  return dates;
+}
+
+/** Daily book activity: WeRead highlight timestamps, Readwise epub updates, lastReadDate fallback. */
+function buildReadingActivity(wereadRawBooks, readwiseBooks) {
   const countByDate = new Map();
-  for (const b of books) {
-    const d = b.lastReadDate;
-    if (d && /^\d{4}-\d{2}-\d{2}$/.test(d)) {
-      countByDate.set(d, (countByDate.get(d) || 0) + 1);
+  const highlightByDate = new Map();
+
+  function add(date, n = 1) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+    countByDate.set(date, (countByDate.get(date) || 0) + n);
+  }
+
+  function addHighlight(date) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+    add(date);
+    highlightByDate.set(date, (highlightByDate.get(date) || 0) + 1);
+  }
+
+  for (const book of wereadRawBooks) {
+    const highlightDates = extractHighlightDates(book.body);
+    if (highlightDates.length > 0) {
+      for (const d of highlightDates) addHighlight(d);
+    } else {
+      const m = book.meta;
+      add(toDateStr(m.lastReadDate || m.lastreaddate || m.finishedDate || m.finisheddate || ''));
     }
   }
 
+  for (const b of readwiseBooks) {
+    if (b.lastReadDate) add(b.lastReadDate);
+  }
+
+  return { countByDate, highlightByDate };
+}
+
+// ── Heatmap: 52-week reading activity ─────────────────────────────────────────
+function renderHeatmap({ countByDate, highlightByDate }) {
   const today = new Date(); today.setHours(12, 0, 0, 0);
   const dayOfWeek = today.getDay();
   const endDate = new Date(today);
@@ -87,7 +122,11 @@ function renderHeatmap(books) {
 
   const todayStr = today.toISOString().slice(0, 10);
   const startStr = startDate.toISOString().slice(0, 10);
-  const totalInYear = [...countByDate.keys()].filter(d => d >= startStr && d <= todayStr).length;
+  const inRange = [...countByDate.entries()].filter(([d]) => d >= startStr && d <= todayStr);
+  const totalInYear = inRange.length;
+  const highlightsInYear = [...highlightByDate.entries()]
+    .filter(([d]) => d >= startStr && d <= todayStr)
+    .reduce((sum, [, c]) => sum + c, 0);
 
   const CELL = 11, GAP = 2, STEP = CELL + GAP;
   const LEFT_PAD = 28, TOP_PAD = 20;
@@ -102,13 +141,13 @@ function renderHeatmap(books) {
     if (wd === 0 && col > 0) col++;
     const dateStr = d.toISOString().slice(0, 10);
     const count = countByDate.get(dateStr) || 0;
-    const level = count === 0 ? 0 : count === 1 ? 1 : count <= 3 ? 2 : count <= 5 ? 3 : 4;
+    const level = count === 0 ? 0 : count <= 2 ? 1 : count <= 8 ? 2 : count <= 20 ? 3 : 4;
     const x = LEFT_PAD + col * STEP, y = TOP_PAD + wd * STEP;
     if (d.getMonth() !== lastMonth && col > 0) {
       monthLabels.push(`<text x="${x}" y="${TOP_PAD - 4}" class="hm-month">${MONTHS[d.getMonth()]}</text>`);
       lastMonth = d.getMonth();
     }
-    cells.push(`<rect x="${x}" y="${y}" width="${CELL}" height="${CELL}" rx="2" class="hm-cell hm-l${level}"><title>${dateStr}: ${count} book${count !== 1 ? 's' : ''} read</title></rect>`);
+    cells.push(`<rect x="${x}" y="${y}" width="${CELL}" height="${CELL}" rx="2" class="hm-cell hm-l${level}"><title>${dateStr}: ${count} reading activit${count !== 1 ? 'ies' : 'y'}</title></rect>`);
     d.setDate(d.getDate() + 1);
     if (d.getDay() === 0) col++;
   }
@@ -125,7 +164,7 @@ function renderHeatmap(books) {
 
   return `<div class="lib-heatmap-wrap">
     <div class="lib-heatmap-header">
-      <span class="lib-heatmap-count"><strong>${totalInYear}</strong> active reading days in the last year</span>
+      <span class="lib-heatmap-count"><strong>${totalInYear}</strong> days with book activity in the last year · <strong>${highlightsInYear}</strong> WeRead highlights</span>
     </div>
     <svg width="${svgW}" height="${svgH}" class="rw-heatmap-svg" style="max-width:100%">
       ${monthLabels.join('')}${dayLabels}${cells.join('')}
@@ -202,10 +241,11 @@ function renderGroups(books) {
 router.get('/books', async (req, res) => {
   const sourceFilter = req.query.src || 'all';
 
-  const [wereadBooks, readwiseBooks] = await Promise.all([
-    Promise.resolve(loadWeReadBooks()),
+  const [wereadRawBooks, readwiseBooks] = await Promise.all([
+    Promise.resolve(getAllBooks()),
     loadReadwiseBooks(),
   ]);
+  const wereadBooks = loadWeReadBooks();
 
   const allBooks = [
     ...wereadBooks.sort((a, b) => b.lastReadDate.localeCompare(a.lastReadDate)),
@@ -237,7 +277,7 @@ router.get('/books', async (req, res) => {
   ).join('');
 
   const groupsHtml = renderGroups(filtered);
-  const heatmapHtml = renderHeatmap(wereadBooks);
+  const heatmapHtml = renderHeatmap(buildReadingActivity(wereadRawBooks, readwiseBooks));
 
   res.send(await render('books.html', {
     pageTitle:      'Books — LLM KB',
