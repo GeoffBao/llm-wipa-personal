@@ -166,6 +166,87 @@ function renderCard(a) {
     </a>`;
 }
 
+// ── Heatmap: 52-week article-saving activity ──────────────────────────────────
+function renderHeatmap(articles) {
+  const countByDate = new Map();
+  for (const a of articles) {
+    if (!a.savedAt) continue;
+    const d = String(a.savedAt).slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) continue;
+    countByDate.set(d, (countByDate.get(d) || 0) + 1);
+  }
+
+  const today = new Date(); today.setHours(12, 0, 0, 0);
+  const dayOfWeek = today.getDay();
+  const endDate = new Date(today);
+  endDate.setDate(endDate.getDate() + (6 - dayOfWeek));
+  const startDate = new Date(endDate);
+  startDate.setDate(startDate.getDate() - 52 * 7 + 1);
+
+  const CELL = 11, GAP = 2, LABEL_H = 18, LABEL_W = 26;
+  const COLS = 52;
+  const width = LABEL_W + COLS * (CELL + GAP);
+  const height = LABEL_H + 7 * (CELL + GAP);
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  const cells = [], monthLabels = [];
+  let col = 0, lastMonth = -1;
+  const d = new Date(startDate);
+
+  while (d <= endDate) {
+    const wd = d.getDay();
+    if (wd === 0 && col > 0) col++;
+    const dateStr = d.toISOString().slice(0, 10);
+    const count = countByDate.get(dateStr) || 0;
+    const level = count === 0 ? 0 : count === 1 ? 1 : count <= 3 ? 2 : count <= 6 ? 3 : 4;
+    const x = LABEL_W + col * (CELL + GAP);
+    const y = LABEL_H + wd * (CELL + GAP);
+    if (d.getMonth() !== lastMonth && col > 0) {
+      monthLabels.push(`<text x="${x}" y="${LABEL_H - 4}" class="hm-month">${MONTHS[d.getMonth()]}</text>`);
+      lastMonth = d.getMonth();
+    }
+    cells.push(`<rect x="${x}" y="${y}" width="${CELL}" height="${CELL}" rx="2" class="hm-cell hm-l${level}"><title>${dateStr}: ${count} saved</title></rect>`);
+    d.setDate(d.getDate() + 1);
+    if (d.getDay() === 0) col++;
+  }
+
+  const dayLabels = ['','Mon','','Wed','','Fri',''].map((l, i) =>
+    l ? `<text x="${LABEL_W - 4}" y="${LABEL_H + i * (CELL + GAP) + CELL - 1}" class="hm-day" text-anchor="end">${l}</text>` : ''
+  ).join('');
+
+  const legend = [0,1,2,3,4].map(l =>
+    `<svg width="${CELL}" height="${CELL}" style="display:inline-block"><rect width="${CELL}" height="${CELL}" rx="2" class="hm-cell hm-l${l}"/></svg>`
+  ).join('');
+
+  return `<div class="rw-heatmap-wrap">
+    <svg width="${width}" height="${height}" class="rw-heatmap-svg" style="max-width:100%">
+      ${monthLabels.join('')}${dayLabels}${cells.join('')}
+    </svg>
+    <div class="rw-heatmap-legend"><span>Less</span>${legend}<span>More</span></div>
+  </div>`;
+}
+
+// ── Top sources bar list ───────────────────────────────────────────────────────
+function renderTopSources(articles) {
+  const counts = new Map();
+  for (const a of articles) {
+    if (!a.domain) continue;
+    counts.set(a.domain, (counts.get(a.domain) || 0) + 1);
+  }
+  const top = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8);
+  if (!top.length) return '';
+  const max = top[0][1];
+  const rows = top.map(([domain, count]) => {
+    const pct = Math.round(count / max * 100);
+    return `<div class="rw-src-row">
+      <span class="rw-src-domain">${domain}</span>
+      <div class="rw-src-bar-wrap"><div class="rw-src-bar" style="width:${pct}%"></div></div>
+      <span class="rw-src-count">${count}</span>
+    </div>`;
+  }).join('');
+  return `<div class="rw-top-sources"><div class="rw-top-sources-title">Top Sources</div>${rows}</div>`;
+}
+
 // ── Sync API endpoint ──────────────────────────────────────────────────────────
 router.post('/api/readwise/sync', (req, res) => {
   const incremental = req.query.mode === 'incremental';
@@ -219,19 +300,6 @@ router.get('/readwise', async (req, res) => {
     return `${Math.floor(secs / 86400)}d ago`;
   }
 
-  const syncLabel = syncedAt ? `synced ${timeAgoLabel(syncedAt)}` : 'vault fallback';
-  const syncingSpinner = _syncRunning
-    ? `<span class="rw-sync-spinner">↻ Syncing…</span>`
-    : '';
-  const statusHtml = syncData
-    ? `<div class="rw-api-status">
-        ${syncingSpinner}
-        ${syncLabel} · ${syncData.totalCount} docs
-        <button class="rw-refresh-btn" id="rw-sync-btn" onclick="rwSync(false)">Sync now</button>
-        <button class="rw-refresh-btn" id="rw-sync-inc-btn" onclick="rwSync(true)">↑ Incremental</button>
-       </div>`
-    : `<div class="rw-api-warn">⚠ No sync data found — <button class="rw-refresh-btn" onclick="rwSync(false)">Run first sync</button></div>`;
-
   const inboxCount   = articles.filter(a => a.location === 'inbox' || a.location === 'new').length;
   const laterCount   = articles.filter(a => a.location === 'later' || a.location === 'shortlist').length;
   const archiveCount = articles.filter(a => a.location === 'archive').length;
@@ -239,14 +307,8 @@ router.get('/readwise', async (req, res) => {
     ? Math.round(articles.filter(a => a.progress >= 0.9).length / articles.length * 100)
     : 0;
 
-  const statsHtml = `
-    <div class="rw-stats">
-      <div class="rw-stat"><span class="rw-stat-num">${articles.length}</span><span class="rw-stat-label">Saved</span></div>
-      <div class="rw-stat"><span class="rw-stat-num">${inboxCount}</span><span class="rw-stat-label">Inbox</span></div>
-      <div class="rw-stat"><span class="rw-stat-num">${laterCount}</span><span class="rw-stat-label">Later</span></div>
-      <div class="rw-stat"><span class="rw-stat-num">${archiveCount}</span><span class="rw-stat-label">Archive</span></div>
-      <div class="rw-stat"><span class="rw-stat-num">${readPct}%</span><span class="rw-stat-label">Completed</span></div>
-    </div>`;
+  const syncLabel = syncedAt ? `synced ${timeAgoLabel(syncedAt)}` : 'vault fallback';
+  const syncingClass = _syncRunning ? ' rw-syncing' : '';
 
   const cardsHtml = filtered.map(renderCard).join('');
   const emptyHtml = filtered.length === 0
@@ -254,17 +316,24 @@ router.get('/readwise', async (req, res) => {
     : '';
 
   res.send(await render('readwise.html', {
-    pageTitle:    'Readwise — LLM KB',
-    activeNav:    'readwise',
-    totalCount:   articles.length,
-    filteredCount: filtered.length,
+    pageTitle:      'Readwise — LLM KB',
+    activeNav:      'readwise',
+    totalCount:     articles.length,
+    inboxCount,
+    laterCount,
+    archiveCount,
+    readPct,
+    filteredCount:  filtered.length,
     catTabsHtml,
     locTabsHtml,
-    statusHtml,
-    statsHtml,
+    heatmapHtml:    renderHeatmap(articles),
+    topSourcesHtml: renderTopSources(articles),
+    syncLabel,
+    syncingClass,
+    hasSyncData:    !!syncData,
     cardsHtml,
     emptyHtml,
-    hasLocTabs:   locs.length > 1,
+    hasLocTabs:     locs.length > 1,
   }));
 });
 

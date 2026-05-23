@@ -1,8 +1,21 @@
 <div class="readwise-page">
+
+  <!-- Header -->
   <div class="rw-header">
     <div class="rw-header-title">
       <svg style="width:22px;height:22px;vertical-align:-4px;margin-right:8px;opacity:.75;flex-shrink:0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg>
       <h1 class="page-title" style="display:inline">Readwise</h1>
+    </div>
+    <div class="rw-header-stats">
+      <span class="rw-hstat"><strong>{{totalCount}}</strong> saved</span>
+      <span class="rw-hstat-sep">·</span>
+      <span class="rw-hstat">{{inboxCount}} inbox</span>
+      <span class="rw-hstat-sep">·</span>
+      <span class="rw-hstat">{{laterCount}} later</span>
+      <span class="rw-hstat-sep">·</span>
+      <span class="rw-hstat">{{archiveCount}} archive</span>
+      <span class="rw-hstat-sep">·</span>
+      <span class="rw-hstat">{{readPct}}% read</span>
     </div>
     <div class="rw-header-actions">
       <a href="https://readwise.io/chat" target="_blank" rel="noopener" class="rw-open-btn rw-chat-btn">
@@ -16,19 +29,42 @@
     </div>
   </div>
 
-  {{{statsHtml}}}
-  {{{statusHtml}}}
+  <!-- Dashboard: heatmap + top sources -->
+  <div class="rw-dashboard">
+    <div class="rw-dashboard-main">
+      <div class="rw-dashboard-label">Saving activity — past year</div>
+      {{{heatmapHtml}}}
+      <div class="rw-sync-bar{{syncingClass}}">
+        {{#if hasSyncData}}
+          <span class="rw-sync-info">{{syncLabel}}</span>
+          <button class="rw-refresh-btn{{syncingClass}}" id="rw-sync-btn" onclick="rwSync(false)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:11px;height:11px;margin-right:3px"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.95"/></svg>
+            Sync
+          </button>
+          <button class="rw-refresh-btn" id="rw-sync-inc-btn" onclick="rwSync(true)">↑ Incremental</button>
+        {{else}}
+          <span class="rw-sync-warn">⚠ No sync data —</span>
+          <button class="rw-refresh-btn" onclick="rwSync(false)">Run first sync</button>
+        {{/if}}
+      </div>
+    </div>
+    <div class="rw-dashboard-side">
+      {{{topSourcesHtml}}}
+    </div>
+  </div>
 
+  <!-- Filters -->
   {{#if hasLocTabs}}
   <div class="rw-loc-tabs">{{{locTabsHtml}}}</div>
   {{/if}}
-
   <div class="rw-tabs">{{{catTabsHtml}}}</div>
 
+  <!-- Feed -->
   <div class="rw-feed">
     {{{cardsHtml}}}
     {{{emptyHtml}}}
   </div>
+
 </div>
 
 <script>
