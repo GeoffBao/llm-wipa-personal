@@ -7,9 +7,13 @@
     <div class="journey-stats">
       <span><strong>{{totalEntries}}</strong> entries</span>
     </div>
+    <div class="journey-view-tabs">
+      <a href="/journey" class="journey-view-tab{{#if viewMonth}} active{{/if}}">月</a>
+      <a href="/journey?view=week" class="journey-view-tab{{#if viewWeek}} active{{/if}}">周</a>
+    </div>
   </div>
 
   <div class="journey-timeline">
-    {{{monthsHtml}}}
+    {{{groupsHtml}}}
   </div>
 </div>

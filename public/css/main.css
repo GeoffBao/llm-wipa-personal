@@ -1723,11 +1723,28 @@ html[data-theme="dark"] .chip-count { background: rgba(255,255,255,0.06); }
   border-bottom: 1px solid var(--border-light);
   padding-bottom: 1rem;
 }
-.journey-stats { font-size: 0.875rem; color: var(--text-muted); }
+.journey-stats { font-size: 0.875rem; color: var(--text-muted); flex: 1; }
+
+.journey-view-tabs {
+  display: flex; gap: 2px;
+  background: var(--bg-hover); border-radius: 8px; padding: 3px;
+  border: 1px solid var(--border-light);
+}
+.journey-view-tab {
+  padding: 3px 14px; border-radius: 5px;
+  font-size: 0.8rem; font-weight: 500; color: var(--text-muted);
+  text-decoration: none; transition: all 0.12s;
+}
+.journey-view-tab:hover { color: var(--text); text-decoration: none; }
+.journey-view-tab.active {
+  background: var(--bg); color: var(--text);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+html[data-theme="dark"] .journey-view-tab.active { box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
 
 .journey-timeline { display: flex; flex-direction: column; gap: 2.5rem; }
 
-.journey-month-label {
+.journey-group-label {
   font-size: 0.8rem; font-weight: 600; letter-spacing: 0.08em;
   text-transform: uppercase; color: var(--text-light);
   margin: 0 0 0.6rem;

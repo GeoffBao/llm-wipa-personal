@@ -75,62 +75,99 @@ function formatMonthLabel(ym) {
   return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
 }
 
-// GET /journey — index by month
+function weekStart(dateStr) {
+  // Returns the Monday of the ISO week for a given YYYY-MM-DD
+  const d = new Date(dateStr + 'T12:00:00');
+  const day = d.getDay(); // 0=Sun
+  const diff = (day === 0 ? -6 : 1 - day);
+  d.setDate(d.getDate() + diff);
+  return d.toISOString().slice(0, 10);
+}
+
+function formatWeekLabel(monStr) {
+  const mon = new Date(monStr + 'T12:00:00');
+  const sun = new Date(mon);
+  sun.setDate(sun.getDate() + 6);
+  const opts = { month: 'short', day: 'numeric' };
+  const sameMonth = mon.getMonth() === sun.getMonth();
+  const start = mon.toLocaleDateString('en-US', opts);
+  const end = sun.toLocaleDateString('en-US', sameMonth ? { day: 'numeric' } : opts);
+  return `${start} – ${end}`;
+}
+
+const TAG_LABELS = { meeting: '会议', memory: '记忆', 'journal-entry': '日记' };
+
+function renderEntryRow(entry) {
+  const sections = extractSections(entry.raw);
+  const d = new Date(entry.date + 'T12:00:00');
+
+  const sectionRows = sections.map(s => {
+    const tagBadge = s.tag
+      ? `<span class="journey-tag journey-tag--${s.tag}">${TAG_LABELS[s.tag] || s.tag}</span>`
+      : '';
+    const timeSpan = s.time ? `<span class="journey-stime">${s.time}</span>` : '';
+    return `<div class="journey-section-item">${timeSpan}<span class="journey-stitle">${s.title || s.full}</span>${tagBadge}</div>`;
+  }).join('');
+
+  return `
+    <a href="/journey/${entry.date}" class="journey-entry-row">
+      <div class="journey-entry-date">
+        <span class="journey-day">${entry.date.slice(8)}</span>
+        <span class="journey-weekday">${d.toLocaleDateString('en-US', { weekday: 'short' })}</span>
+      </div>
+      <div class="journey-entry-body">
+        ${sectionRows || '<span class="journey-empty">No entries</span>'}
+      </div>
+    </a>`;
+}
+
+// GET /journey — index (month or week view)
 router.get('/journey', async (req, res) => {
   const entries = await loadJourneyEntries();
+  const view = req.query.view === 'week' ? 'week' : 'month';
 
-  // Group by YYYY-MM
-  const byMonth = new Map();
-  for (const entry of entries) {
-    const ym = entry.date.slice(0, 7);
-    if (!byMonth.has(ym)) byMonth.set(ym, []);
-    byMonth.get(ym).push(entry);
-  }
+  let groupsHtml;
 
-  const TAG_LABELS = { meeting: '会议', memory: '记忆', 'journal-entry': '日记' };
-
-  const monthsHtml = [...byMonth.entries()].map(([ym, monthEntries]) => {
-    const items = monthEntries.map(entry => {
-      const sections = extractSections(entry.raw);
-
-      const sectionRows = sections.map(s => {
-        const tagBadge = s.tag
-          ? `<span class="journey-tag journey-tag--${s.tag}">${TAG_LABELS[s.tag] || s.tag}</span>`
-          : '';
-        const timeSpan = s.time
-          ? `<span class="journey-stime">${s.time}</span>`
-          : '';
-        return `
-          <div class="journey-section-item">
-            ${timeSpan}
-            <span class="journey-stitle">${s.title || s.full}</span>
-            ${tagBadge}
-          </div>`;
-      }).join('');
-
+  if (view === 'week') {
+    // Group by Monday of ISO week
+    const byWeek = new Map();
+    for (const entry of entries) {
+      const key = weekStart(entry.date);
+      if (!byWeek.has(key)) byWeek.set(key, []);
+      byWeek.get(key).push(entry);
+    }
+    groupsHtml = [...byWeek.entries()].map(([monStr, weekEntries]) => {
+      const items = weekEntries.map(renderEntryRow).join('');
       return `
-        <a href="/journey/${entry.date}" class="journey-entry-row">
-          <div class="journey-entry-date">
-            <span class="journey-day">${entry.date.slice(8)}</span>
-            <span class="journey-weekday">${new Date(entry.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short' })}</span>
-          </div>
-          <div class="journey-entry-body">
-            ${sectionRows || '<span class="journey-empty">No entries</span>'}
-          </div>
-        </a>`;
+        <div class="journey-group">
+          <h2 class="journey-group-label">${formatWeekLabel(monStr)}</h2>
+          <div class="journey-month-entries">${items}</div>
+        </div>`;
     }).join('');
-
-    return `
-      <div class="journey-month">
-        <h2 class="journey-month-label">${formatMonthLabel(ym)}</h2>
-        <div class="journey-month-entries">${items}</div>
-      </div>`;
-  }).join('');
+  } else {
+    // Group by YYYY-MM
+    const byMonth = new Map();
+    for (const entry of entries) {
+      const ym = entry.date.slice(0, 7);
+      if (!byMonth.has(ym)) byMonth.set(ym, []);
+      byMonth.get(ym).push(entry);
+    }
+    groupsHtml = [...byMonth.entries()].map(([ym, monthEntries]) => {
+      const items = monthEntries.map(renderEntryRow).join('');
+      return `
+        <div class="journey-group">
+          <h2 class="journey-group-label">${formatMonthLabel(ym)}</h2>
+          <div class="journey-month-entries">${items}</div>
+        </div>`;
+    }).join('');
+  }
 
   res.send(await render('journey.html', {
     pageTitle: 'Journey — LLM KB',
     totalEntries: entries.length,
-    monthsHtml: monthsHtml || '<p class="journey-empty-state">No journey entries found.</p>',
+    groupsHtml: groupsHtml || '<p class="journey-empty-state">No journey entries found.</p>',
+    viewMonth: view === 'month',
+    viewWeek: view === 'week',
     activeNav: 'journey',
   }));
 });
