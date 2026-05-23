@@ -1,0 +1,46 @@
+<div class="library-page">
+
+  <!-- Header -->
+  <div class="lib-header">
+    <div class="lib-header-title">
+      <svg style="width:22px;height:22px;vertical-align:-4px;margin-right:8px;opacity:.75;flex-shrink:0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 0 3-3h7z"/></svg>
+      <h1 class="page-title" style="display:inline">Library</h1>
+    </div>
+    <div class="rw-header-actions">
+      <a href="https://weread.qq.com" target="_blank" rel="noopener" class="rw-open-btn rw-chat-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;margin-right:5px"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 0 3-3h7z"/></svg>
+        微信读书
+      </a>
+      <a href="https://readwise.io/reader" target="_blank" rel="noopener" class="rw-open-btn">
+        Readwise
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;margin-left:4px"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+      </a>
+    </div>
+  </div>
+  <div class="lib-header-stats">
+    <span class="rw-hstat"><strong>{{totalBooks}}</strong> books</span>
+    <span class="rw-hstat-sep">·</span>
+    <span class="rw-hstat">{{totalFinished}} finished</span>
+    <span class="rw-hstat-sep">·</span>
+    <span class="rw-hstat">{{totalNotes}} highlights</span>
+    <span class="rw-hstat-sep">·</span>
+    <span class="rw-hstat">{{wereadCount}} WeRead · {{readwiseCount}} Readwise</span>
+  </div>
+
+  <!-- Heatmap -->
+  <div class="rw-dashboard" style="margin-bottom:1rem">
+    <div class="rw-dashboard-main" style="width:100%">
+      <div class="rw-dashboard-label">Reading activity — past year</div>
+      {{{heatmapHtml}}}
+    </div>
+  </div>
+
+  <!-- Tabs + Grid -->
+  <div class="lib-tabs">{{{tabsHtml}}}</div>
+
+  <div class="lib-grid">
+    {{{booksHtml}}}
+    {{{emptyHtml}}}
+  </div>
+
+</div>
