@@ -1796,3 +1796,63 @@ html[data-theme="dark"] .journey-pill--journal-entry { background: rgba(21,128,6
 }
 .journey-nav-link:hover { color: var(--blue); border-color: var(--blue); background: var(--bg-hover); text-decoration: none; }
 .journey-nav-link--index { font-weight: 600; }
+
+/* ===== JOURNEY HEATMAP ===== */
+.journey-heatmap-wrap {
+  margin-bottom: 2rem;
+  padding: 1rem 1.25rem 0.9rem;
+  background: var(--bg);
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  overflow-x: auto;
+}
+.journey-heatmap-header {
+  display: flex; align-items: center; gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+.journey-heatmap-title {
+  font-size: 0.85rem; font-weight: 600; color: var(--text);
+}
+.journey-heatmap-count {
+  font-size: 0.8rem; color: var(--text-muted); flex: 1;
+}
+.journey-heatmap-link {
+  font-size: 0.78rem; color: var(--blue); text-decoration: none;
+}
+.journey-heatmap-link:hover { text-decoration: underline; }
+
+.journey-heatmap-svg { display: block; overflow: visible; }
+
+/* Cell level colors — light theme */
+.hm-cell { cursor: default; }
+.hm-l0 { fill: var(--hm-empty, #ebedf0); }
+.hm-l1 { fill: var(--hm-l1, #9be9a8); }
+.hm-l2 { fill: var(--hm-l2, #40c463); }
+.hm-l3 { fill: var(--hm-l3, #30a14e); }
+.hm-l4 { fill: var(--hm-l4, #216e39); }
+a .hm-cell { cursor: pointer; }
+a .hm-cell:hover { opacity: 0.8; }
+
+.hm-month {
+  font-size: 9px; fill: var(--text-light);
+  font-family: var(--font-sans); dominant-baseline: auto;
+}
+.hm-day {
+  font-size: 8px; fill: var(--text-light); text-anchor: end;
+  font-family: var(--font-sans); dominant-baseline: auto;
+}
+
+.journey-heatmap-legend {
+  display: flex; align-items: center; gap: 5px;
+  margin-top: 0.5rem; justify-content: flex-end;
+}
+.hm-legend-label { font-size: 0.72rem; color: var(--text-light); }
+
+/* Dark theme overrides */
+html[data-theme="dark"] {
+  --hm-empty: #161b22;
+  --hm-l1: #0e4429;
+  --hm-l2: #006d32;
+  --hm-l3: #26a641;
+  --hm-l4: #39d353;
+}
