@@ -9,41 +9,51 @@
 
 ### Homepage — Wiki Index & Domain Navigation
 ![Homepage](docs/screenshots/home.png)
-The homepage opens with a bold amber **Wiki Index** hero card surfacing three domain clusters (Methods & PKM, AI & Agents, Camera & Imaging) with direct links to key articles. Below it: a featured concept of the day, a *Did You Know?* digest of random concepts, and a **Recently Updated** feed showing the latest file modifications across the vault — all updating live as you edit in Obsidian.
+The homepage opens with a bold **Wiki Index** hero card surfacing three domain clusters (Methods & PKM, AI & Agents, Camera & Imaging) with direct links to key articles. Below: a featured concept of the day, a *Did You Know?* digest, and a **Recently Updated** feed showing the latest vault modifications — all live as you edit in Obsidian.
 
 ---
 
-### Article Page — Two-Column Layout with TOC & Infobox
-![Article](docs/screenshots/article.png)
-Every article renders with a sticky right sidebar containing a structured **infobox** (type, created, updated) and a nested **table of contents** auto-generated from headings. The main column has a breadcrumb trail, tag pills, rendered wikilinks, tables, code blocks, and a backlinks panel at the bottom. Max-width typography and `line-height: 1.7` make long mixed Chinese/English articles comfortable to read.
+### Library — Unified Reading Shelf
+![Library](docs/screenshots/library.png)
+The **Library** aggregates reading from two sources: **微信读书** (WeRead, 14 books from the vault) and **Readwise** (54 epub books from Reader). A 52-week reading activity heatmap sits at the top. Source tabs let you filter by platform. Each book card shows the cover image, author, progress bar, note count, and reading time — with source badges distinguishing WeRead from Readwise books.
+
+---
+
+### Readwise Dashboard — Decoupled Sync Architecture
+![Readwise](docs/screenshots/readwise.png)
+The Readwise dashboard shows your full **Reader** library (2,422 items) with inline stats in the header. A two-column panel displays a 52-week **saving activity heatmap** and **top sources bar chart** side-by-side. Location tabs (All / Archive / Feed / Later / New) and category tabs (Article / Email / Book / PDF / Podcast / RSS / Tweet / Video) let you drill into any slice. Sync runs as a background script — no API calls on page load, always fast.
+
+---
+
+### Journey — Memory Timeline
+![Journey](docs/screenshots/journey.png)
+The **Journey** page is a reverse-chronological log of daily memory entries with a 52-week activity heatmap at the top. Entries are grouped by month. Each row shows the time, title, and an optional category badge (记忆, 会议, 日记). Month/week view toggles let you scan at different granularities.
 
 ---
 
 ### Knowledge Graph — D3 Force-Directed Wikilink Map
 ![Knowledge Graph](docs/screenshots/graph.png)
-All 448 notes become nodes in a live D3 force simulation. Node size scales with backlink count; color encodes section (Concept, Source, Map, Synthesis, Prompt, Note, Project). Nodes are draggable. A search box dims all non-matching nodes and their edges. The graph renders the full wikilink topology of the vault — dense clusters emerge naturally where concepts are heavily cross-referenced.
+All notes become nodes in a live D3 force simulation. Node size scales with backlink count; color encodes section (Concept, Source, Map, Synthesis, Prompt, Note, Project). Nodes are draggable. A search box dims all non-matching nodes and their edges. Dense clusters emerge naturally where concepts are heavily cross-referenced.
+
+---
+
+### Article Page — Two-Column Layout with TOC & Infobox
+![Article](docs/screenshots/article.png)
+Every article renders with a sticky right sidebar containing a structured **infobox** and a nested **table of contents** auto-generated from headings. The main column has breadcrumb, tag pills, rendered wikilinks, tables, code blocks, and a backlinks panel at the bottom.
 
 ---
 
 ### Canvas Viewer — Obsidian Diagrams in the Browser
 ![Canvas Viewer](docs/screenshots/canvas-viewer.png)
-`.canvas` files from the Obsidian vault are parsed and rendered as interactive pan/zoom diagrams — color-coded cards, labeled arrows, and grouped layout preserved exactly as designed in Obsidian. No plugins or external renderers required; the viewer is built entirely with vanilla JS and SVG.
-
----
-
-### Readwise Dashboard — Live Reader API Integration
-![Readwise Dashboard](docs/screenshots/readwise-dashboard.png)
-A full **Readwise Reader** dashboard that pulls live data via the Readwise API v3 (`GET /list`) — saved articles, inbox, read-later queue, and archive — all displayed with rich metadata. Features include: stats row (Saved / Inbox / Later / Archive / Completed %), location filter tabs, color-coded location badges, reading progress bars with percentage labels, estimated read time from word count, and article summaries. An in-memory cache (5 min TTL) keeps it snappy; a status bar shows live/vault mode and cache age. Falls back gracefully to vault files when no API token is set.
-
-![Readwise Detail](docs/screenshots/readwise-v2.png)
+`.canvas` files from the Obsidian vault are parsed and rendered as interactive pan/zoom diagrams — color-coded cards, labeled arrows, and grouped layout preserved exactly as designed in Obsidian.
 
 ---
 
 ## What Is This?
 
-LLM WIPA turns your Obsidian markdown vault into a beautiful, fast, locally-served website — no cloud, no sync, no data leaving your machine. It reads your vault files directly and serves them as a Wikipedia-inspired knowledge base with full-text search, a D3 knowledge graph, wikilink navigation, Canvas diagrams, an Excalidraw viewer, and a **live Readwise Reader dashboard** powered by the Readwise API v3.
+LLM WIPA turns your Obsidian markdown vault into a beautiful, fast, locally-served website — no cloud, no sync, no data leaving your machine. It reads your vault files directly and serves them as a Wikipedia-inspired knowledge base with full-text search, a D3 knowledge graph, wikilink navigation, Canvas diagrams, an Excalidraw viewer, a **unified Library** aggregating WeRead + Readwise books, and a **Readwise Reader dashboard** backed by a background sync script.
 
-Designed for vaults that grow into the hundreds or thousands of files, with mixed Chinese/English content, heavy wikilink graphs, and structured metadata.
+Designed for vaults that grow into hundreds or thousands of files, with mixed Chinese/English content, heavy wikilink graphs, and structured metadata.
 
 ---
 
@@ -55,7 +65,19 @@ Designed for vaults that grow into the hundreds or thousands of files, with mixe
 - **Backlinks panel** — every article shows what links to it
 - **Browse by section** — Concepts, Sources, Maps, Synthesis, Prompts, Notes, Projects
 - **Browse by tag** — click any tag to see all articles tagged with it
-- **Reading Shelf** — dedicated view for books with progress tracking
+
+### Library (Unified Reading Shelf)
+- **Aggregates two sources** — WeRead vault books (from Obsidian markdown files) + Readwise epub books (from sync data)
+- **52-week reading activity heatmap** at the top of the library page
+- **Source filter tabs** — All / 微信读书 / Readwise
+- **Book cards** — cover image with placeholder fallback, progress bar, note count, reading time, source badge, finished checkmark
+- **Deduplication** — WeRead takes priority when the same book exists in both sources
+
+### Journey
+- **Daily memory timeline** — reverse-chronological log of markdown journal entries
+- **52-week activity heatmap** — visualizes writing frequency over the past year
+- **Month/week view toggle** — scan entries at different granularities
+- **Category badges** — color-coded labels (记忆, 会议, 日记, etc.)
 
 ### Search
 - **Full-text search** — powered by [MiniSearch](https://github.com/lucaoneto/minisearch) with CJK tokenizer
@@ -67,27 +89,27 @@ Designed for vaults that grow into the hundreds or thousands of files, with mixe
 - **Knowledge Graph** — force-directed D3 graph of all wikilink connections; color-coded by section; searchable; draggable nodes
 - **Canvas Viewer** — renders Obsidian `.canvas` files as interactive pan/zoom diagrams
 - **Excalidraw Viewer** — renders `.excalidraw` JSON files as SVG; supports rectangles, ellipses, diamonds, arrows, text, pan/zoom
-- **Flipbook (generative pixel UI)** — flipbook.page-style infinite visual browser, vault-grounded. See [Flipbook](#flipbook-generative-pixel-ui) below.
+- **Flipbook (generative pixel UI)** — flipbook.page-style infinite visual browser, vault-grounded
 
 ### Readwise Integration
-- **Live Reader API** — connects to Readwise API v3 (`GET /list`) when `READWISE_TOKEN` is set in `.env`; graceful fallback to vault files
-- **Dashboard** — stats row (Saved / Inbox / Later / Archive / Completed %) with location filter tabs and color-coded badges
-- **Reading progress** — progress bar + percentage label; estimated read time from word count; article summary (2-line clamp)
-- **Smart caching** — in-memory cache with 5 min TTL; `/readwise/refresh` endpoint to bust cache on demand
-- **API status bar** — shows live/vault mode and cache age at a glance
+- **Background sync** — `node --env-file=.env scripts/sync-readwise.js` fetches Readwise API v3 and writes a local JSON file; the web page reads that file only — no API calls on page load
+- **Incremental sync** — `--incremental` flag for fast updates; full sync on demand
+- **Dashboard** — saving activity heatmap + top sources bar chart; location tabs; category tabs; reading progress + estimated read time
+- **Library integration** — Readwise epub books also appear in the unified `/library` page
 
 ### Design
-- Warm cream background (`#fdf8f0`) with amber accents — easy on the eyes for long reading sessions
+- Warm cream background (`#fdf8f0`) with blue/amber accents — easy on the eyes for long reading sessions
 - Frosted-glass header with `backdrop-filter`
 - Apple-inspired card lift interactions
 - Responsive layout — works on tablet viewports
 - CJK-aware typography (`line-height: 1.7`, `word-break: break-word`)
+- Light / dark / Wikipedia theme switcher
 
 ### Developer Experience
 - **Zero build step** — `npm start` serves the current vault state immediately
 - **Hot reload** — `chokidar` watches the vault; edit a file, refresh the page
 - **No framework** — pure Express + vanilla JS + server-rendered HTML templates
-- **Configurable via `.env`** — vault path, Excalidraw path, port
+- **Configurable via `.env`** — vault path, Excalidraw path, port, Readwise token
 
 ---
 
@@ -112,8 +134,11 @@ Designed for vaults that grow into the hundreds or thousands of files, with mixe
 ```
 llm-wipa/
 ├── server.js                   # Express entry point + chokidar watcher
-├── config.js                   # Reads VAULT_PATH, PORT from environment
+├── config.js                   # Reads VAULT_PATH, PORT, READWISE_TOKEN from environment
 ├── .env.example                # Environment variable template
+│
+├── scripts/
+│   └── sync-readwise.js        # Background Readwise sync → Raw/readwise-sync-data.json
 │
 ├── src/
 │   ├── vault/
@@ -135,11 +160,12 @@ llm-wipa/
 │       ├── article.js          # GET /wiki/:slug
 │       ├── browse.js           # GET /browse/:section, /browse/tags/:tag
 │       ├── search.js           # GET /search?q=
-│       ├── reading.js          # GET /reading
+│       ├── libraryRoute.js     # GET /library, GET /reading/:slug
+│       ├── journeyRoute.js     # GET /journey, GET /journey/:date
 │       ├── graph.js            # GET /graph, GET /api/graph
-│       ├── canvasRoute.js      # GET /canvas, GET /canvas/:slug
+│       ├── canvasRoute.js      # GET /diagrams, GET /diagrams/:slug
 │       ├── excalidrawRoute.js  # GET /excalidraw, GET /excalidraw/:slug
-│       ├── readwise.js         # GET /readwise, GET /readwise/refresh
+│       ├── readwiseRoute.js    # GET /readwise
 │       └── api.js              # GET /api/search, GET /api/random
 │
 ├── views/
@@ -148,11 +174,12 @@ llm-wipa/
 │   ├── article.html            # Article: two-column layout with sticky sidebar
 │   ├── browse.html             # Section/tag listing
 │   ├── search.html             # Search results
-│   ├── reading.html            # Reading shelf
+│   ├── library.html            # Unified library: heatmap + source tabs + book grid
+│   ├── journey.html            # Journey timeline with activity heatmap
+│   ├── readwise.html           # Readwise dashboard: heatmap + top sources + feed
 │   ├── graph.html              # Full-screen D3 graph (standalone, no layout)
 │   ├── canvas.html             # Canvas viewer (standalone)
 │   ├── excalidraw.html         # Excalidraw viewer (standalone)
-│   ├── readwise.html           # Readwise Reader dashboard
 │   └── 404.html                # Not found with suggestions
 │
 └── public/
@@ -179,7 +206,7 @@ llm-wipa/
 ### Install
 
 ```bash
-git clone https://github.com/easonnie/llm-wipa-personal.git
+git clone https://github.com/GeoffBao/llm-wipa-personal.git
 cd llm-wipa-personal
 npm install
 ```
@@ -201,6 +228,9 @@ EXCALIDRAW_DIR=/path/to/your/Excalidraw
 
 # Server port
 PORT=3000
+
+# Readwise API token (for Readwise dashboard + Library integration)
+READWISE_TOKEN=your_token_here
 ```
 
 ### Run
@@ -219,48 +249,42 @@ npm run dev
 
 > Vault file changes (editing markdown) are picked up immediately via chokidar — no restart needed. Only changes to source code require `npm run dev` reload.
 
+### Sync Readwise
+
+Run the background sync script to fetch your Readwise Reader library:
+
+```bash
+# Full sync (first run or weekly refresh)
+node --env-file=.env scripts/sync-readwise.js
+
+# Incremental sync (fast, only new/updated items)
+node --env-file=.env scripts/sync-readwise.js --incremental
+```
+
+The script writes `Raw/readwise-sync-data.json` into your vault. The web server reads this file on page load — no live API calls required, so the dashboard is always instant.
+
 ---
 
 ## Flipbook (Generative Pixel UI)
 
-`/flipbook/:slug` is an experimental, [flipbook.page](https://flipbook.page)-style visual browser for any vault article. It renders a local SVG "pixel UI" frame from your vault graph: a center topic card, surrounding concept cards, curved edges, and deterministic click regions. No image model is required for the base experience.
+`/flipbook/:slug` is an experimental, [flipbook.page](https://flipbook.page)-style visual browser for any vault article. It renders a local SVG "pixel UI" frame from your vault graph: a center topic card, surrounding concept cards, curved edges, and deterministic click regions.
 
 ### How to use it
 
 - From any wiki article, click the **Flipbook** button next to the section badge.
 - Or open it directly: `http://localhost:3000/flipbook/agent-memory`.
 - Click outer concept cards to jump to real vault articles.
-- Click the center card to recursively explore the next set of related concepts. The previous frame is kept on a Back stack.
-
-### Provider: local SVG
-
-The Flipbook UI is rendered locally. It does not call fal.ai, Gemini, or any other model in the blocking path.
-
-```env
-FLIPBOOK_PROVIDER=local-svg
-```
-
-`FAL_KEY` can still exist in your private `.env`; it is ignored by the base Flipbook renderer and reserved for a future optional AI enhancer.
+- Click the center card to recursively explore the next set of related concepts.
 
 ### Caching
 
-Frame JSON is cached on disk under `public/flipbook-cache/<key>.frame.json`:
-
-- **Root pages** are keyed by `sha1(slug + mtime)` — editing the source markdown automatically invalidates the cache on next visit.
-- **Explore pages** are keyed by `sha1(parentKey + click coords + concept)` so the same click reproduces the same image.
-- The cache directory is gitignored. Delete it any time to regenerate.
-
-### Risks / known issues
-
-1. **Not official flipbook.page** — it reproduces the interaction pattern, not the closed service.
-2. **Graph quality depends on vault links** — articles with rich wikilinks/backlinks get better surrounding cards.
-3. **Local SVG is deterministic** — less visually magical than AI image generation, but fast, readable, and reliable.
+Frame JSON is cached on disk under `public/flipbook-cache/<key>.frame.json`. Delete it any time to regenerate.
 
 ---
 
 ## Vault Structure Expected
 
-The loader indexes these subdirectories under `VAULT_PATH/Wiki/` by default (configurable in `config.js`):
+The loader indexes these subdirectories under `VAULT_PATH/Wiki/` by default:
 
 ```
 Wiki/
@@ -275,11 +299,10 @@ Wiki/
 Additional paths indexed automatically:
 - `Notes/` — personal notes (browseable, searchable)
 - `Projects/` — project documentation
-- `Raw/` (books subdirectory) — reading shelf entries
+- `Raw/weread/` — WeRead book highlights (shown in Library)
+- `Journey/` — daily memory entries (shown in Journey timeline)
 
 ### Metadata Format
-
-The parser supports two metadata formats:
 
 **Inline blockquote** (primary, Obsidian-native):
 ```markdown
@@ -289,18 +312,16 @@ The parser supports two metadata formats:
 > Tags: #agent #llm
 ```
 
-**YAML frontmatter** (fallback, common in Readwise imports):
+**YAML frontmatter** (fallback, common in Readwise/WeRead imports):
 ```yaml
 ---
 title: My Note
 author: John Doe
-type: source
+progress: 37%
+noteCount: 12
+cover: https://...
 ---
 ```
-
-### Wikilinks
-
-Standard Obsidian `[[Page Title]]` and `[[Page Title|Display Text]]` syntax is fully supported. Resolution priority: exact title → case-insensitive → slug match → red "missing" link.
 
 ---
 
@@ -345,77 +366,25 @@ launchctl load ~/Library/LaunchAgents/com.llm-wipa.server.plist
 
 ## Raycast Integration
 
-Three [Raycast](https://raycast.com/) scripts are included in `raycast-scripts/` to control and access the knowledge base directly from your macOS menu bar — no switching to Terminal or a browser tab required.
+Three [Raycast](https://raycast.com/) scripts are included in `raycast-scripts/` to control and access the knowledge base directly from your macOS menu bar.
 
 ### Setup
-
-1. Open **Raycast Preferences → Extensions → Script Commands**
-2. Click **Add Directories** and point it at the `raycast-scripts/` folder in this project
-3. Make sure the scripts are executable (run once):
 
 ```bash
 chmod +x raycast-scripts/*.sh
 ```
 
-All three scripts will appear under the package name **AI Knowledge Base** in Raycast.
-
----
+Add the `raycast-scripts/` folder in Raycast → Extensions → Script Commands.
 
 ### Scripts
 
-#### 🟢 `kb-status.sh` — Server Status Monitor
+| Script | Description |
+|---|---|
+| `kb-status.sh` | Inline menu bar status badge — 🟢 Running / 🔴 Offline, auto-refreshes every 30s |
+| `open-knowledge-base.sh` | Opens homepage in default browser; starts server if not running |
+| `search-knowledge-base.sh` | Takes a query from Raycast search bar, opens `/search?q=` directly |
 
-```
-Title:    LLM KB Server Status
-Mode:     inline (shows result in Raycast menu bar)
-Refresh:  every 30 seconds
-```
-
-Pings `http://localhost:3000` and displays a live status badge directly in the Raycast menu bar without opening any window. Auto-refreshes every 30 seconds so you always know at a glance whether the server is up.
-
-- **🟢 Running on http://localhost:3000** — server is healthy and accepting requests
-- **🔴 Server offline** — LaunchAgent has stopped or hasn't been loaded yet
-
-> Useful as a persistent ambient indicator while working in Obsidian — you can see the server state without leaving your editor.
-
----
-
-#### 🧠 `open-knowledge-base.sh` — One-Key Open
-
-```
-Title:    Open LLM Knowledge Base
-Mode:     silent (no output window)
-```
-
-Opens the knowledge base homepage in your default browser with a single Raycast keystroke. Includes a built-in safety check: if the server is not already running it calls `launchctl start com.llm-wipa.server` and waits 2 seconds before opening the browser, so the page is always reachable regardless of server state.
-
-**Recommended:** assign a global hotkey (e.g. `⌥K`) in Raycast so you can jump to your knowledge base from any app in under a second.
-
----
-
-#### 🔍 `search-knowledge-base.sh` — Instant Search
-
-```
-Title:    Search LLM Knowledge Base
-Mode:     silent
-Argument: text input with placeholder "搜索词…"
-```
-
-Accepts a free-text query directly in the Raycast search bar, URL-encodes it via Python's `urllib.parse.quote` (handles CJK characters and special symbols correctly), and opens `http://localhost:3000/search?q=<encoded>` in your browser — landing directly on the full search results page.
-
-**Example:** type `agent memory` in Raycast → browser opens with all matching concepts, sources, and notes pre-filtered.
-
-> Supports Chinese, Japanese, and mixed-language queries out of the box because of the URL encoding step.
-
----
-
-### Recommended Raycast Hotkeys
-
-| Script | Suggested Hotkey | When to use |
-|---|---|---|
-| Open LLM Knowledge Base | `⌥K` | Jump to homepage from anywhere |
-| Search LLM Knowledge Base | `⌥F` | Search without opening the browser first |
-| LLM KB Server Status | *(always visible in menu bar)* | Ambient health check |
+**Recommended hotkeys:** `⌥K` to open, `⌥F` to search.
 
 ---
 
@@ -428,28 +397,28 @@ Accepts a free-text query directly in the Raycast search bar, URL-encodes it via
 | `GET /browse/:section` | All articles in a section |
 | `GET /browse/tags/:tag` | All articles with a tag |
 | `GET /search?q=` | Full-text search results |
-| `GET /reading` | Reading shelf (books) |
+| `GET /library` | Unified library — WeRead + Readwise books with heatmap |
+| `GET /reading/:slug` | Individual WeRead book page |
+| `GET /journey` | Daily memory timeline with activity heatmap |
+| `GET /journey/:date` | Single journey entry |
+| `GET /readwise` | Readwise Reader dashboard |
 | `GET /graph` | Interactive D3 knowledge graph |
-| `GET /canvas` | Canvas diagram gallery |
-| `GET /canvas/:slug` | Single canvas diagram viewer |
+| `GET /diagrams` | Canvas diagram gallery |
+| `GET /diagrams/:slug` | Single canvas diagram viewer |
 | `GET /excalidraw` | Excalidraw drawing gallery |
 | `GET /excalidraw/:slug` | Single Excalidraw viewer |
 | `GET /api/search?q=` | JSON autocomplete results |
 | `GET /api/random` | JSON `{ slug }` for random concept |
 | `GET /api/graph` | JSON graph data for D3 |
-| `GET /readwise` | Readwise Reader dashboard |
-| `GET /readwise/refresh` | Bust readwise cache and re-fetch |
 
 ---
 
 ## Design Philosophy
 
-This project is built around a few strong opinions:
-
 - **Local-first** — your knowledge never leaves your machine
 - **No build step** — `npm start` and it works; no webpack, no bundler, no compilation
 - **Vault as source of truth** — the app reads files directly; the vault stays pure Obsidian-compatible markdown
-- **Scales gracefully** — MiniSearch stays fast to ~5,000 files; chokidar handles incremental updates; slug generation is deterministic so URLs are stable as the vault grows
+- **Scales gracefully** — MiniSearch stays fast to ~5,000 files; chokidar handles incremental updates
 - **Typography for reading** — `line-height: 1.7`, `max-width: 860px` article body, CJK-aware text handling
 
 ---
