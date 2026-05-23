@@ -1,6 +1,7 @@
 import { Router } from 'express';
-import { readdir, readFile } from 'fs/promises';
+import { readdir, readFile, writeFile } from 'fs/promises';
 import { join } from 'path';
+import { tmpdir } from 'os';
 import { render } from '../render/template.js';
 import { VAULT_PATH, READWISE_CHAT_URL } from '../../config.js';
 import yaml from 'js-yaml';
@@ -13,7 +14,10 @@ const READWISE_DIR   = () => join(VAULT_PATH, 'Raw', 'readwise');
 // ── In-memory cache ───────────────────────────────────────────────────────────
 let _cache = null;
 let _cacheAt = 0;
-const CACHE_TTL = 5 * 60 * 1000; // 5 min
+let _rateLimitUntil = 0;  // don't hit API again until this timestamp
+const CACHE_TTL      = 5 * 60 * 1000;   // 5 min normal TTL
+const RATE_LIMIT_TTL = 15 * 60 * 1000;  // 15 min backoff after 429
+const DISK_CACHE     = join(tmpdir(), 'llm-wipa-readwise-cache.json');
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const CAT_LABELS = {
@@ -62,8 +66,35 @@ function progressBar(pct) {
 }
 
 // ── API loader ────────────────────────────────────────────────────────────────
+async function loadDiskCache() {
+  try {
+    const raw = await readFile(DISK_CACHE, 'utf8');
+    const { articles, savedAt } = JSON.parse(raw);
+    return { articles, savedAt };
+  } catch {
+    return null;
+  }
+}
+
+async function saveDiskCache(articles) {
+  try {
+    await writeFile(DISK_CACHE, JSON.stringify({ articles, savedAt: Date.now() }), 'utf8');
+  } catch { /* non-fatal */ }
+}
+
 async function fetchFromAPI() {
-  if (_cache && Date.now() - _cacheAt < CACHE_TTL) return _cache;
+  const now = Date.now();
+
+  // Memory cache still fresh
+  if (_cache && now - _cacheAt < CACHE_TTL) return _cache;
+
+  // Rate-limited — don't retry yet, serve from memory or disk
+  if (now < _rateLimitUntil) {
+    if (_cache) return _cache;
+    const disk = await loadDiskCache();
+    if (disk) { _cache = disk.articles; _cacheAt = disk.savedAt; return _cache; }
+    throw new Error('Readwise API rate limited — no cached data available');
+  }
 
   const articles = [];
   let cursor = null;
@@ -76,6 +107,17 @@ async function fetchFromAPI() {
     const resp = await fetch(url.toString(), {
       headers: { Authorization: `Token ${READWISE_TOKEN()}` },
     });
+
+    if (resp.status === 429) {
+      const retryAfter = parseInt(resp.headers.get('Retry-After') || '0', 10);
+      _rateLimitUntil = now + (retryAfter > 0 ? retryAfter * 1000 : RATE_LIMIT_TTL);
+      // Return stale memory cache, then disk cache, then throw
+      if (_cache) return _cache;
+      const disk = await loadDiskCache();
+      if (disk) { _cache = disk.articles; _cacheAt = disk.savedAt; return _cache; }
+      throw new Error(`Readwise API responded 429`);
+    }
+
     if (!resp.ok) throw new Error(`Readwise API responded ${resp.status}`);
     const data = await resp.json();
     articles.push(...data.results);
@@ -84,25 +126,27 @@ async function fetchFromAPI() {
 
   _cache = articles
     .map(d => ({
-      id:       d.id,
-      title:    d.title || '(untitled)',
-      author:   d.author || '',
-      url:      `https://read.readwise.io/read/${d.id}`,
+      id:        d.id,
+      title:     d.title || '(untitled)',
+      author:    d.author || '',
+      url:       `https://read.readwise.io/read/${d.id}`,
       sourceUrl: d.source_url || d.url || '',
-      category: (d.category || 'article').toLowerCase(),
-      location: (d.location || 'inbox').toLowerCase(),
-      savedAt:  d.saved_at || d.created_at || '',
-      tags:     (d.tags || []).map(t => t.name),
-      domain:   extractDomain(d.source_url || d.url || ''),
-      progress: typeof d.reading_progress === 'number' ? d.reading_progress : 0,
+      category:  (d.category || 'article').toLowerCase(),
+      location:  (d.location || 'inbox').toLowerCase(),
+      savedAt:   d.saved_at || d.created_at || '',
+      tags:      (d.tags || []).map(t => t.name),
+      domain:    extractDomain(d.source_url || d.url || ''),
+      progress:  typeof d.reading_progress === 'number' ? d.reading_progress : 0,
       wordCount: d.word_count || 0,
-      summary:  d.summary || '',
-      imageUrl: d.image_url || '',
-      source:   'api',
+      summary:   d.summary || '',
+      imageUrl:  d.image_url || '',
+      source:    'api',
     }))
     .sort((a, b) => String(b.savedAt).localeCompare(String(a.savedAt)));
 
-  _cacheAt = Date.now();
+  _cacheAt = now;
+  _rateLimitUntil = 0;
+  saveDiskCache(_cache);  // persist to disk (non-blocking)
   return _cache;
 }
 
@@ -237,8 +281,13 @@ router.get('/readwise', async (req, res) => {
     ? Math.round((Date.now() - _cacheAt) / 1000)
     : null;
 
+  const is429 = apiError.includes('429');
+  const retryMins = is429 ? Math.ceil((_rateLimitUntil - Date.now()) / 60000) : 0;
+  const cacheSource = _cacheAt ? `cached ${Math.round((Date.now() - _cacheAt) / 1000)}s ago` : 'disk cache';
   const statusHtml = apiError
-    ? `<div class="rw-api-warn">⚠ API error: ${apiError} — showing vault data</div>`
+    ? is429
+      ? `<div class="rw-api-warn">⚠ Readwise API rate limited (429) — showing cached data · ${cacheSource}${retryMins > 0 ? ` · retry in ${retryMins}m` : ''} <button class="rw-refresh-btn" onclick="location.href='/readwise/refresh'">Retry now</button></div>`
+      : `<div class="rw-api-warn">⚠ API error: ${apiError} — showing vault data</div>`
     : usingAPI
       ? `<div class="rw-api-status">Live via Readwise API${cacheAge !== null ? ` · cached ${cacheAge}s ago` : ''} <button class="rw-refresh-btn" onclick="location.href='/readwise/refresh'">Refresh</button></div>`
       : `<div class="rw-api-status rw-api-vault">Reading from vault · <a href="#setup">Add READWISE_TOKEN to .env</a> for live data</div>`;
@@ -283,6 +332,7 @@ router.get('/readwise', async (req, res) => {
 router.get('/readwise/refresh', (req, res) => {
   _cache = null;
   _cacheAt = 0;
+  _rateLimitUntil = 0;
   res.redirect('/readwise');
 });
 
