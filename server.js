@@ -21,6 +21,7 @@ import excalidrawRouter from './src/routes/excalidrawRoute.js';
 import { loadExcalidrawFiles } from './src/vault/excalidraw.js';
 import readwiseRouter from './src/routes/readwiseRoute.js';
 import flipbookRouter from './src/routes/flipbookRoute.js';
+import journeyRouter from './src/routes/journeyRoute.js';
 import { CACHE_DIR as FLIPBOOK_CACHE_DIR } from './src/services/flipbook.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -53,6 +54,7 @@ app.use(canvasRouter);
 app.use(excalidrawRouter);
 app.use(readwiseRouter);
 app.use(flipbookRouter);
+app.use(journeyRouter);
 
 // Debounced vault watcher
 let rebuildTimer = null;
