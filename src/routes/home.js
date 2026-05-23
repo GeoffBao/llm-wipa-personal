@@ -27,7 +27,6 @@ router.get('/', async (req, res) => {
   const dykHtml = renderDYK(didYouKnow);
   const indexNav = renderIndexNav(allFiles);
   const orphanNudge = orphans.length ? renderOrphanNudge(orphans) : '';
-  const journeyHeatmap = await renderJourneyHeatmap();
 
   res.send(await render('home.html', {
     pageTitle: "LLM KB — Eason's Knowledge Base",
@@ -38,7 +37,6 @@ router.get('/', async (req, res) => {
     portals,
     indexNav,
     orphanNudge,
-    journeyHeatmap,
     totalFiles: stats.total,
     totalConcepts: stats.concepts,
     totalSources: stats.sources,
@@ -268,136 +266,6 @@ function timeAgo(date) {
 
 function formatDate(date) {
   return new Date(date).toISOString().slice(0, 10);
-}
-
-async function renderJourneyHeatmap() {
-  const JOURNEY_DIR = join(VAULT_PATH, 'Journey');
-  let files;
-  try {
-    files = await readdir(JOURNEY_DIR);
-  } catch {
-    return '';
-  }
-
-  // Build date → section count map
-  const entryMap = new Map();
-  for (const filename of files) {
-    if (!/^\d{4}-\d{2}-\d{2}\.md$/.test(filename)) continue;
-    const date = filename.replace('.md', '');
-    try {
-      const raw = await readFile(join(JOURNEY_DIR, filename), 'utf8');
-      const sections = (raw.match(/^##\s+/gm) || []).length;
-      entryMap.set(date, sections);
-    } catch { /* skip */ }
-  }
-
-  // Build 52-week grid ending today, starting on Sunday
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const todayStr = today.toISOString().slice(0, 10);
-
-  // Find the Sunday at or before (today - 363 days)
-  const gridEnd = new Date(today);
-  const gridStart = new Date(today);
-  gridStart.setDate(gridStart.getDate() - 363);
-  // Rewind to Sunday
-  gridStart.setDate(gridStart.getDate() - gridStart.getDay());
-
-  // Collect total entries in range
-  const totalInYear = [...entryMap.keys()].filter(d => d >= gridStart.toISOString().slice(0, 10) && d <= todayStr).length;
-
-  // Build week columns
-  const weeks = [];
-  const cursor = new Date(gridStart);
-  while (cursor <= gridEnd) {
-    const week = [];
-    for (let d = 0; d < 7; d++) {
-      const dateStr = cursor.toISOString().slice(0, 10);
-      const isFuture = cursor > today;
-      const count = entryMap.get(dateStr) || 0;
-      week.push({ date: dateStr, count, isFuture });
-      cursor.setDate(cursor.getDate() + 1);
-    }
-    weeks.push(week);
-  }
-
-  // Month labels: track which column each month label starts at
-  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const monthLabels = [];
-  let prevMonth = -1;
-  weeks.forEach((week, wi) => {
-    const firstDay = new Date(week[0].date + 'T12:00:00');
-    const m = firstDay.getMonth();
-    if (m !== prevMonth) {
-      monthLabels.push({ col: wi + 1, label: MONTHS[m] });
-      prevMonth = m;
-    }
-  });
-
-  const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-
-  // Level: 0=empty, 1=1, 2=2-3, 3=4-5, 4=6+
-  function level(count, isFuture) {
-    if (isFuture || count === 0) return 0;
-    if (count === 1) return 1;
-    if (count <= 3) return 2;
-    if (count <= 5) return 3;
-    return 4;
-  }
-
-  // SVG approach — compact, pixel-perfect
-  const CELL = 11, GAP = 2, STEP = CELL + GAP;
-  const LEFT_PAD = 28; // space for day labels
-  const TOP_PAD = 20;  // space for month labels
-  const svgW = LEFT_PAD + weeks.length * STEP;
-  const svgH = TOP_PAD + 7 * STEP;
-
-  const monthLabelsSvg = monthLabels.map(({ col, label }) =>
-    `<text x="${LEFT_PAD + (col - 1) * STEP}" y="${TOP_PAD - 6}" class="hm-month">${label}</text>`
-  ).join('');
-
-  const dayLabelsSvg = [1, 3, 5].map(d =>
-    `<text x="${LEFT_PAD - 4}" y="${TOP_PAD + d * STEP + CELL - 2}" class="hm-day">${DAYS[d]}</text>`
-  ).join('');
-
-  const cellsSvg = weeks.map((week, wi) =>
-    week.map((cell, di) => {
-      const x = LEFT_PAD + wi * STEP;
-      const y = TOP_PAD + di * STEP;
-      const lv = level(cell.count, cell.isFuture);
-      const title = cell.count ? `${cell.date}: ${cell.count} section${cell.count > 1 ? 's' : ''}` : cell.date;
-      const link = cell.count > 0 ? `<a href="/journey/${cell.date}">` : '';
-      const linkClose = cell.count > 0 ? '</a>' : '';
-      return `${link}<rect x="${x}" y="${y}" width="${CELL}" height="${CELL}" rx="2" class="hm-cell hm-l${lv}" data-date="${cell.date}" data-count="${cell.count}"><title>${title}</title></rect>${linkClose}`;
-    }).join('')
-  ).join('');
-
-  const legend = [0,1,2,3,4].map(l =>
-    `<rect width="${CELL}" height="${CELL}" rx="2" class="hm-cell hm-l${l}"/>`
-  ).join('');
-
-  return `
-  <div class="journey-heatmap-wrap">
-    <div class="journey-heatmap-header">
-      <span class="journey-heatmap-title">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2z"/><path d="M12 6v6l4 2"/></svg>Journey
-      </span>
-      <span class="journey-heatmap-count"><strong>${totalInYear}</strong> entries in the last year</span>
-      <a href="/journey" class="journey-heatmap-link">View all →</a>
-    </div>
-    <svg class="journey-heatmap-svg" viewBox="0 0 ${svgW} ${svgH}" width="${svgW}" height="${svgH}">
-      ${monthLabelsSvg}
-      ${dayLabelsSvg}
-      ${cellsSvg}
-    </svg>
-    <div class="journey-heatmap-legend">
-      <span class="hm-legend-label">Less</span>
-      <svg viewBox="0 0 ${5 * STEP - GAP} ${CELL}" width="${5 * STEP - GAP}" height="${CELL}">${
-        [0,1,2,3,4].map((l, i) => `<rect x="${i * STEP}" y="0" width="${CELL}" height="${CELL}" rx="2" class="hm-cell hm-l${l}"/>`).join('')
-      }</svg>
-      <span class="hm-legend-label">More</span>
-    </div>
-  </div>`;
 }
 
 export default router;

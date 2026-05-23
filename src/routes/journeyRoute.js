@@ -97,6 +97,86 @@ function formatWeekLabel(monStr) {
 
 const TAG_LABELS = { meeting: '会议', memory: '记忆', 'journal-entry': '日记' };
 
+async function renderJourneyHeatmap(entries) {
+  const entryMap = new Map();
+  for (const entry of entries) {
+    const sections = (entry.raw.match(/^##\s+/gm) || []).length;
+    entryMap.set(entry.date, sections);
+  }
+
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const todayStr = today.toISOString().slice(0, 10);
+  const gridEnd = new Date(today);
+  const gridStart = new Date(today);
+  gridStart.setDate(gridStart.getDate() - 363);
+  gridStart.setDate(gridStart.getDate() - gridStart.getDay());
+
+  const totalInYear = [...entryMap.keys()].filter(d => d >= gridStart.toISOString().slice(0, 10) && d <= todayStr).length;
+
+  const weeks = [];
+  const cursor = new Date(gridStart);
+  while (cursor <= gridEnd) {
+    const week = [];
+    for (let d = 0; d < 7; d++) {
+      const dateStr = cursor.toISOString().slice(0, 10);
+      week.push({ date: dateStr, count: entryMap.get(dateStr) || 0, isFuture: cursor > today });
+      cursor.setDate(cursor.getDate() + 1);
+    }
+    weeks.push(week);
+    if (cursor.getDay() === 0) {} // already advanced
+  }
+
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const monthLabels = [];
+  let prevMonth = -1;
+  weeks.forEach((week, wi) => {
+    const m = new Date(week[0].date + 'T12:00:00').getMonth();
+    if (m !== prevMonth) { monthLabels.push({ col: wi, label: MONTHS[m] }); prevMonth = m; }
+  });
+
+  function level(count, isFuture) {
+    if (isFuture || count === 0) return 0;
+    if (count === 1) return 1; if (count <= 3) return 2; if (count <= 5) return 3; return 4;
+  }
+
+  const CELL = 11, GAP = 2, STEP = CELL + GAP;
+  const LEFT_PAD = 28, TOP_PAD = 20;
+  const svgW = LEFT_PAD + weeks.length * STEP;
+  const svgH = TOP_PAD + 7 * STEP;
+
+  const monthLabelsSvg = monthLabels.map(({ col, label }) =>
+    `<text x="${LEFT_PAD + col * STEP}" y="${TOP_PAD - 6}" class="hm-month">${label}</text>`
+  ).join('');
+  const dayLabelsSvg = [1,3,5].map(d =>
+    `<text x="${LEFT_PAD - 4}" y="${TOP_PAD + d * STEP + CELL - 2}" class="hm-day">${['','Mon','','Wed','','Fri',''][d]}</text>`
+  ).join('');
+  const cellsSvg = weeks.map((week, wi) =>
+    week.map((cell, di) => {
+      const x = LEFT_PAD + wi * STEP, y = TOP_PAD + di * STEP;
+      const lv = level(cell.count, cell.isFuture);
+      const title = cell.count ? `${cell.date}: ${cell.count} section${cell.count > 1 ? 's' : ''}` : cell.date;
+      const wrap = cell.count > 0 ? [`<a href="/journey/${cell.date}">`, '</a>'] : ['',''];
+      return `${wrap[0]}<rect x="${x}" y="${y}" width="${CELL}" height="${CELL}" rx="2" class="hm-cell hm-l${lv}" data-date="${cell.date}"><title>${title}</title></rect>${wrap[1]}`;
+    }).join('')
+  ).join('');
+
+  return `<div class="journey-heatmap-wrap">
+    <div class="journey-heatmap-header">
+      <span class="journey-heatmap-count"><strong>${totalInYear}</strong> entries in the last year</span>
+    </div>
+    <svg class="journey-heatmap-svg" viewBox="0 0 ${svgW} ${svgH}" width="${svgW}" height="${svgH}">
+      ${monthLabelsSvg}${dayLabelsSvg}${cellsSvg}
+    </svg>
+    <div class="journey-heatmap-legend">
+      <span class="hm-legend-label">Less</span>
+      <svg viewBox="0 0 ${5*STEP-GAP} ${CELL}" width="${5*STEP-GAP}" height="${CELL}">${
+        [0,1,2,3,4].map((l,i) => `<rect x="${i*STEP}" y="0" width="${CELL}" height="${CELL}" rx="2" class="hm-cell hm-l${l}"/>`).join('')
+      }</svg>
+      <span class="hm-legend-label">More</span>
+    </div>
+  </div>`;
+}
+
 function renderEntryRow(entry) {
   const sections = extractSections(entry.raw);
   const d = new Date(entry.date + 'T12:00:00');
@@ -162,9 +242,12 @@ router.get('/journey', async (req, res) => {
     }).join('');
   }
 
+  const heatmapHtml = await renderJourneyHeatmap(entries);
+
   res.send(await render('journey.html', {
     pageTitle: 'Journey — LLM KB',
     totalEntries: entries.length,
+    heatmapHtml,
     groupsHtml: groupsHtml || '<p class="journey-empty-state">No journey entries found.</p>',
     viewMonth: view === 'month',
     viewWeek: view === 'week',
