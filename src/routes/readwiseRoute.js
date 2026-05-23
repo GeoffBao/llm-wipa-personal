@@ -5,7 +5,7 @@ import { spawn } from 'child_process';
 import { dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { render } from '../render/template.js';
-import { VAULT_PATH, READWISE_CHAT_URL } from '../../config.js';
+import { VAULT_PATH } from '../../config.js';
 import yaml from 'js-yaml';
 
 const router = Router();
@@ -165,15 +165,6 @@ function renderCard(a) {
       ${bar ? `<div class="rw-card-progress">${bar}${pctLabel}</div>` : ''}
     </a>`;
 }
-
-// ── Readwise Chat (in LLM KB shell; Readwise itself blocks iframe — see view) ─
-router.get('/readwise/chat', async (_req, res) => {
-  res.send(await render('readwise-chat-embed.html', {
-    pageTitle: 'Readwise Chat — LLM KB',
-    activeNav: 'readwise',
-    readwiseChatUrl: READWISE_CHAT_URL,
-  }));
-});
 
 // ── Sync API endpoint ──────────────────────────────────────────────────────────
 router.post('/api/readwise/sync', (req, res) => {
