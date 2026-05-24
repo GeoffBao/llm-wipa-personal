@@ -108,6 +108,32 @@ html[data-theme="dark"] .tag:hover { background: var(--blue-light); color: var(-
 /* Footer */
 html[data-theme="dark"] .site-footer { background: var(--bg); border-top-color: var(--border-light); }
 
+/* Books page — year-grouped shelf */
+html[data-theme="dark"] .bk-card {
+  background: var(--bg-card);
+  border-color: var(--border-light);
+}
+html[data-theme="dark"] .bk-card:hover {
+  background: var(--bg-hover);
+  border-color: rgba(184,192,255,0.25);
+}
+html[data-theme="dark"] .bk-year-heading {
+  color: var(--text-muted);
+  border-bottom-color: var(--border-light);
+}
+html[data-theme="dark"] .bk-cover-ph {
+  background: linear-gradient(145deg, rgba(184,192,255,.15) 0%, rgba(184,192,255,.05) 100%);
+  color: var(--blue);
+}
+html[data-theme="dark"] .bk-badge {
+  background: rgba(255,255,255,0.08);
+  color: var(--text-muted);
+}
+html[data-theme="dark"] .bk-badge-done   { color: #6ee7a0; }
+html[data-theme="dark"] .bk-badge-reading { color: #fbbf24; }
+html[data-theme="dark"] .bk-badge-src    { color: #6ee7a0; background: rgba(110,231,160,0.1); }
+html[data-theme="dark"] .bk-badge-rw     { color: #c4b5fd; background: rgba(196,181,253,0.1); }
+
 /* Readwise badges stay legible */
 html[data-theme="dark"] .rw-cat-article { background: rgba(184,192,255,0.12); color: var(--blue); }
 html[data-theme="dark"] .rw-cat-rss     { background: rgba(234,179,8,0.16);  color: #f0c94a; }
