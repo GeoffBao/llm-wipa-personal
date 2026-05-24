@@ -82,12 +82,14 @@ function renderBreadcrumb(file) {
 
 function renderBacklinksHtml(backlinks) {
   if (!backlinks.length) return '';
-  const links = backlinks.slice(0, 10).map(f =>
+  const first = backlinks.slice(0, 10).map(f =>
     `<li><a href="/wiki/${f.slug}" class="wikilink">${f.title}</a></li>`
   ).join('');
-  const more = backlinks.length > 10
-    ? `<li class="backlinks-more">…${backlinks.length} total</li>` : '';
-  return `<ul class="backlinks-list">${links}${more}</ul>`;
+  if (backlinks.length <= 10) return `<ul class="backlinks-list">${first}</ul>`;
+  const rest = backlinks.slice(10).map(f =>
+    `<li><a href="/wiki/${f.slug}" class="wikilink">${f.title}</a></li>`
+  ).join('');
+  return `<ul class="backlinks-list">${first}<li class="backlinks-more" role="button" tabindex="0">…${backlinks.length} total</li><div class="backlinks-extra" hidden>${rest}</div></ul>`;
 }
 
 function renderTagBadges(tags) {

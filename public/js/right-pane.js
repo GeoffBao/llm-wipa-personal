@@ -124,4 +124,20 @@
 
   function truncate(s, n) { return s.length > n ? s.slice(0, n - 1) + '…' : s; }
   function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  // ── Backlinks expand ───────────────────────────────────────────────────────
+  pane.addEventListener('click', e => {
+    const btn = e.target.closest('.backlinks-more');
+    if (!btn) return;
+    const extra = btn.nextElementSibling;
+    if (!extra || !extra.classList.contains('backlinks-extra')) return;
+    extra.removeAttribute('hidden');
+    btn.remove();
+  });
+  pane.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      const btn = e.target.closest('.backlinks-more');
+      if (btn) btn.click();
+    }
+  });
 })();

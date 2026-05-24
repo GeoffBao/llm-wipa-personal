@@ -112,7 +112,8 @@ html[data-theme="dark"] .pane-tab-count { background: rgba(255,255,255,0.06); }
 .pane-panel .backlinks-list li:hover { background: var(--bg-hover); }
 .pane-panel .backlinks-list a { color: var(--text); text-decoration: none; }
 .pane-panel .backlinks-list a:hover { color: var(--blue); }
-.pane-panel .backlinks-more { padding: 4px 8px; color: var(--text-light); font-style: italic; font-size: 0.78rem; }
+.pane-panel .backlinks-more { padding: 4px 8px; color: var(--blue); font-style: italic; font-size: 0.78rem; cursor: pointer; }
+.pane-panel .backlinks-more:hover { text-decoration: underline; }
 
 .pane-empty {
   padding: 14px 8px;
