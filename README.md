@@ -232,8 +232,13 @@ EXCALIDRAW_DIR=/path/to/your/Excalidraw
 # Server port
 PORT=3000
 
-# Readwise API token (for Readwise dashboard + Library integration)
+# Readwise API token (for Readwise dashboard + Books integration)
 READWISE_TOKEN=your_token_here
+
+# WeRead cookie (for Books page — progress, reading time, finish status)
+# How to get: open weread.qq.com → log in → DevTools → Network → any /web/ request
+#             → Headers → copy the full Cookie header value
+WEREAD_COOKIE=wr_skey=xxx; wr_vid=xxx; wr_rt=xxx; ...
 ```
 
 ### Run
