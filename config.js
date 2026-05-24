@@ -1,6 +1,9 @@
 export const VAULT_PATH = process.env.VAULT_PATH || '';
 export const PORT = parseInt(process.env.PORT || '3000', 10);
 
+/** WeRead cookie string for data sync (set WEREAD_COOKIE in .env) */
+export const WEREAD_COOKIE = process.env.WEREAD_COOKIE || '';
+
 /** Readwise Chat web URL (fallback open-in-reader link) */
 export const READWISE_CHAT_URL = process.env.READWISE_CHAT_URL || 'https://readwise.io/chat';
 

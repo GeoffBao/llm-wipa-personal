@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { readFile } from 'fs/promises';
+import { readFileSync } from 'fs';
 import { join } from 'path';
 import { getAllBooks } from '../vault/loader.js';
 import { renderMarkdown } from '../render/markdown.js';
@@ -8,7 +9,8 @@ import { VAULT_PATH } from '../../config.js';
 
 const router = Router();
 
-const SYNC_FILE = () => join(VAULT_PATH, 'Raw', 'readwise-sync-data.json');
+const SYNC_FILE        = () => join(VAULT_PATH, 'Raw', 'readwise-sync-data.json');
+const WEREAD_SYNC_FILE = () => join(VAULT_PATH, 'Raw', 'weread-sync-data.json');
 
 function toDateStr(val) {
   if (!val) return '';
@@ -44,25 +46,44 @@ async function loadReadwiseBooks() {
   }
 }
 
+// Load optional weread-sync-data.json (from scripts/sync-weread.js)
+function loadWeReadSyncData() {
+  try {
+    const raw = readFileSync(WEREAD_SYNC_FILE(), 'utf8');
+    const data = JSON.parse(raw);
+    const map = new Map();
+    for (const b of (data.books || [])) {
+      map.set(b.title?.toLowerCase().trim(), b);
+    }
+    return map;
+  } catch {
+    return new Map();
+  }
+}
+
 function loadWeReadBooks() {
+  const syncMap = loadWeReadSyncData(); // title → fresh API data
+
   return getAllBooks().map(book => {
     const m = book.meta;
     const progressStr = String(m.progress || '0%');
     const progressPct = parseInt(progressStr) || 0;
     const slug = book.slug.replace('reading-', '');
+    const sync = syncMap.get(book.title?.toLowerCase().trim()); // fresh data if available
+
     return {
       id:          `wr-${book.slug}`,
       title:       book.title,
       author:      m.author instanceof Date ? '' : String(m.author || ''),
-      cover:       m.cover instanceof Date ? '' : String(m.cover || ''),
-      progressPct,
+      cover:       (m.cover instanceof Date ? '' : String(m.cover || '')) || sync?.cover || '',
+      progressPct: sync ? (sync.progress || progressPct) : progressPct,
       source:      'weread',
-      noteCount:   m.noteCount || 0,
-      reviewCount: m.reviewCount || 0,
-      readingTime: String(m.readingTime || m.readingtime || ''),
-      lastReadDate: toDateStr(m.lastReadDate || m.lastreaddate || m.finishedDate || m.finisheddate || m.readingDate || m.readingdate || ''),
+      noteCount:   sync?.noteCount  ?? (m.noteCount  || 0),
+      reviewCount: sync?.reviewCount ?? (m.reviewCount || 0),
+      readingTime: sync?.readingTime || String(m.readingTime || m.readingtime || ''),
+      lastReadDate: sync?.lastReadDate || toDateStr(m.lastReadDate || m.lastreaddate || m.finishedDate || m.finisheddate || m.readingDate || m.readingdate || ''),
       url:         `/reading/${slug}`,
-      isFinished:  progressPct >= 99 || !!m.finishedDate || !!m.finisheddate,
+      isFinished:  (sync ? sync.isFinished : false) || progressPct >= 99 || !!m.finishedDate || !!m.finisheddate,
       isLocal:     true,
     };
   });
