@@ -11,21 +11,30 @@
  *   ~/Library/Containers/com.apple.iBooksX/Data/Documents/BKLibrary/BKLibrary-*.sqlite
  *   ~/Library/Containers/com.apple.iBooksX/Data/Documents/AEAnnotation/AEAnnotation_*.sqlite
  *
+ * Apple Books stores EPUBs as expanded directories (not zipped), so cover images
+ * are directly readable. This script extracts covers and caches them in the
+ * server's public/covers/ab/ directory.
+ *
  * Writes: Raw/apple-books-sync-data.json
  */
 
 import Database from 'better-sqlite3';
-import { writeFileSync, readdirSync } from 'fs';
-import { join } from 'path';
+import { writeFileSync, readdirSync, existsSync, mkdirSync, copyFileSync, readFileSync } from 'fs';
+import { join, dirname } from 'path';
 import { homedir } from 'os';
+import { fileURLToPath } from 'url';
 
 const VAULT_PATH = process.env.VAULT_PATH || '';
 if (!VAULT_PATH) { console.error('[apple-books-sync] VAULT_PATH not set'); process.exit(1); }
 
-const HOME     = homedir();
-const BK_DIR   = join(HOME, 'Library/Containers/com.apple.iBooksX/Data/Documents/BKLibrary');
-const AE_DIR   = join(HOME, 'Library/Containers/com.apple.iBooksX/Data/Documents/AEAnnotation');
-const OUT_FILE = join(VAULT_PATH, 'Raw', 'apple-books-sync-data.json');
+const HOME      = homedir();
+const BK_DIR    = join(HOME, 'Library/Containers/com.apple.iBooksX/Data/Documents/BKLibrary');
+const AE_DIR    = join(HOME, 'Library/Containers/com.apple.iBooksX/Data/Documents/AEAnnotation');
+const OUT_FILE  = join(VAULT_PATH, 'Raw', 'apple-books-sync-data.json');
+
+// Cover cache: <project-root>/public/covers/ab/
+const __dir     = dirname(fileURLToPath(import.meta.url));
+const COVER_DIR = join(__dir, '..', 'public', 'covers', 'ab');
 
 // ── Find SQLite file matching a pattern in a directory ────────────────────────
 function findDb(dir, prefix) {
@@ -46,19 +55,82 @@ function macTsToDate(ts) {
   return new Date((ts + 978307200) * 1000).toISOString().slice(0, 10);
 }
 
+// ── Extract cover image from an expanded EPUB directory ───────────────────────
+// Apple Books on iCloud stores EPUBs as directories (not ZIP files).
+// We parse container.xml → OPF → cover item → copy the image file.
+function extractCover(epubPath, bookId) {
+  const cached = join(COVER_DIR, `${bookId}.jpg`);
+  if (existsSync(cached)) return `/public/covers/ab/${bookId}.jpg`;
+
+  try {
+    if (!existsSync(epubPath)) return '';
+
+    // 1. Read container.xml
+    const containerPath = join(epubPath, 'META-INF', 'container.xml');
+    if (!existsSync(containerPath)) return '';
+    const container = readFileSync(containerPath, 'utf8');
+    const opfMatch  = container.match(/full-path="([^"]+\.opf)"/);
+    if (!opfMatch) return '';
+
+    // 2. Read OPF
+    const opfPath = join(epubPath, ...opfMatch[1].split('/'));
+    if (!existsSync(opfPath)) return '';
+    const opf     = readFileSync(opfPath, 'utf8');
+    const opfDir  = dirname(opfPath);
+
+    // 3. Find cover image href — try several patterns
+    let coverHref = '';
+
+    // Pattern A: <item properties="cover-image" href="...">
+    const propMatch = opf.match(/<item[^>]+properties=["'][^"']*cover-image[^"']*["'][^>]+href=["']([^"']+)["']/);
+    if (propMatch) coverHref = propMatch[1];
+
+    // Pattern B: <meta name="cover" content="ID"/> then <item id="ID" href="...">
+    if (!coverHref) {
+      const metaMatch = opf.match(/<meta\s+name=["']cover["']\s+content=["']([^"']+)["']/i)
+                     || opf.match(/<meta\s+content=["']([^"']+)["']\s+name=["']cover["']/i);
+      if (metaMatch) {
+        const id = metaMatch[1];
+        const itemMatch = opf.match(new RegExp(`<item[^>]+id=["']${id}["'][^>]+href=["']([^"']+)["']`))
+                       || opf.match(new RegExp(`<item[^>]+href=["']([^"']+)["'][^>]+id=["']${id}["']`));
+        if (itemMatch) coverHref = itemMatch[1];
+      }
+    }
+
+    // Pattern C: first image item with "cover" in id or href
+    if (!coverHref) {
+      const fallback = opf.match(/<item[^>]+(?:id|href)=["'][^"']*cover[^"']*["'][^>]+href=["']([^"']+)["']/i)
+                    || opf.match(/<item[^>]+href=["']([^"']*cover[^"']*\.(?:jpe?g|png))["']/i);
+      if (fallback) coverHref = fallback[1];
+    }
+
+    if (!coverHref) return '';
+
+    // 4. Resolve relative to OPF directory and copy
+    const imgPath = join(opfDir, ...coverHref.split('/'));
+    if (!existsSync(imgPath)) return '';
+
+    copyFileSync(imgPath, cached);
+    return `/public/covers/ab/${bookId}.jpg`;
+  } catch {
+    return '';
+  }
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 function main() {
+  mkdirSync(COVER_DIR, { recursive: true });
   console.log('[apple-books-sync] Opening Apple Books databases…');
 
   const bkDb = new Database(findDb(BK_DIR, 'BKLibrary'), { readonly: true });
   const aeDb = new Database(findDb(AE_DIR, 'AEAnnotation'), { readonly: true });
 
-  // ── 1. Annotation counts per book ──────────────────────────────────────────
+  // ── 1. Annotation counts per book (non-deleted only) ───────────────────────
   const annotationRows = aeDb.prepare(`
     SELECT ZANNOTATIONASSETID as assetId, COUNT(*) as cnt
     FROM ZAEANNOTATION
-    WHERE ZANNOTATIONDELETED = 0
-       OR ZANNOTATIONDELETED IS NULL
+    WHERE (ZANNOTATIONDELETED = 0 OR ZANNOTATIONDELETED IS NULL)
+      AND ZANNOTATIONASSETID != ''
     GROUP BY ZANNOTATIONASSETID
   `).all();
 
@@ -74,14 +146,13 @@ function main() {
       ZASSETID                        as bookId,
       ZTITLE                          as title,
       ZAUTHOR                         as author,
-      ZCOVERURL                       as cover,
+      ZPATH                           as epubPath,
       ZREADINGPROGRESS                as progressRaw,
       ZBOOKHIGHWATERMARKPROGRESS      as highWater,
       ZLASTOPENDATE                   as lastOpenTs,
       ZDATEFINISHED                   as finishedTs,
       ZISFINISHED                     as isFinished,
-      ZGENRE                          as genre,
-      ZPAGECOUNT                      as pageCount
+      ZGENRE                          as genre
     FROM ZBKLIBRARYASSET
     WHERE ZTITLE IS NOT NULL
       AND ZASSETID IS NOT NULL
@@ -90,14 +161,17 @@ function main() {
 
   bkDb.close();
 
-  const books = rows.map(r => {
+  let coversFound = 0;
+  const books = rows.map((r, i) => {
     const progressRaw = r.progressRaw ?? r.highWater ?? 0;
     const progress    = Math.round(progressRaw * 100);
     const isFinished  = r.isFinished === 1 || progress >= 99;
 
-    // Cover: Apple Books stores a local cache path or empty — skip local paths,
-    // keep http URLs only (they work as <img src>)
-    const cover = (r.cover && r.cover.startsWith('http')) ? r.cover : '';
+    // Extract cover from EPUB directory
+    const cover = r.epubPath ? extractCover(r.epubPath, r.bookId) : '';
+    if (cover) coversFound++;
+
+    process.stdout.write(`\r[apple-books-sync] ${i + 1}/${rows.length} covers…`);
 
     return {
       bookId:       r.bookId,
@@ -113,6 +187,8 @@ function main() {
     };
   });
 
+  console.log('');
+
   // ── 3. Write output ────────────────────────────────────────────────────────
   const output = {
     syncedAt: new Date().toISOString(),
@@ -122,9 +198,9 @@ function main() {
 
   writeFileSync(OUT_FILE, JSON.stringify(output, null, 2), 'utf8');
   console.log(`[apple-books-sync] ✓ Wrote ${books.length} books → ${OUT_FILE}`);
-  console.log(`[apple-books-sync]   Finished:   ${books.filter(b => b.isFinished).length}`);
-  console.log(`[apple-books-sync]   Highlights: ${books.reduce((s, b) => s + b.noteCount, 0)}`);
-  console.log(`[apple-books-sync]   With date:  ${books.filter(b => b.lastReadDate).length}`);
+  console.log(`[apple-books-sync]   Covers extracted: ${coversFound}/${books.length}`);
+  console.log(`[apple-books-sync]   Finished:         ${books.filter(b => b.isFinished).length}`);
+  console.log(`[apple-books-sync]   Highlights:       ${books.reduce((s, b) => s + b.noteCount, 0)}`);
 }
 
 main();
