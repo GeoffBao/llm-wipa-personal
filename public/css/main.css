@@ -1502,6 +1502,16 @@ html[data-theme="dark"] .bk-badge {
 .bk-badge-reading { color: var(--text-muted); }
 .bk-badge-done { color: #047857; }
 html[data-theme="dark"] .bk-badge-done { color: #6ee7a0; }
+.bk-badge-ab {
+  background: rgba(250, 100, 50, 0.08);
+  color: #c94b1a;
+  border: 1px solid rgba(250, 100, 50, 0.18);
+}
+html[data-theme="dark"] .bk-badge-ab {
+  background: rgba(255, 140, 90, 0.12);
+  color: #ffad7a;
+  border-color: rgba(255, 140, 90, 0.22);
+}
 
 .bk-stats, .bk-date {
   font-size: 0.72rem; color: var(--text-light); line-height: 1.4;

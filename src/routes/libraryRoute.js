@@ -9,8 +9,9 @@ import { VAULT_PATH } from '../../config.js';
 
 const router = Router();
 
-const SYNC_FILE        = () => join(VAULT_PATH, 'Raw', 'readwise-sync-data.json');
-const WEREAD_SYNC_FILE = () => join(VAULT_PATH, 'Raw', 'weread-sync-data.json');
+const SYNC_FILE             = () => join(VAULT_PATH, 'Raw', 'readwise-sync-data.json');
+const WEREAD_SYNC_FILE      = () => join(VAULT_PATH, 'Raw', 'weread-sync-data.json');
+const APPLE_BOOKS_SYNC_FILE = () => join(VAULT_PATH, 'Raw', 'apple-books-sync-data.json');
 
 function toDateStr(val) {
   if (!val) return '';
@@ -89,6 +90,37 @@ function loadWeReadBooks() {
   });
 }
 
+// ── Apple Books loader ─────────────────────────────────────────────────────────
+
+function loadAppleBooksSyncData() {
+  try {
+    const raw = readFileSync(APPLE_BOOKS_SYNC_FILE(), 'utf8');
+    const data = JSON.parse(raw);
+    return data.books || [];
+  } catch {
+    return [];
+  }
+}
+
+function loadAppleBooks() {
+  return loadAppleBooksSyncData().map(b => ({
+    id:          `ab-${b.bookId}`,
+    title:       b.title,
+    author:      b.author || '',
+    cover:       b.cover  || '',
+    progressPct: b.progress || 0,
+    source:      'appleBooks',
+    noteCount:   b.noteCount   || 0,
+    reviewCount: 0,
+    readingTime: '',
+    lastReadDate: b.lastReadDate || '',
+    url:         '',
+    isFinished:  b.isFinished || false,
+    isLocal:     false,
+    category:    b.category || '',
+  }));
+}
+
 const WEREAD_HIGHLIGHT_RE = /⏱ (\d{4}-\d{2}-\d{2})/g;
 
 function extractHighlightDates(body) {
@@ -99,8 +131,8 @@ function extractHighlightDates(body) {
   return dates;
 }
 
-/** Daily book activity: WeRead highlight timestamps, Readwise epub updates, lastReadDate fallback. */
-function buildReadingActivity(wereadRawBooks, readwiseBooks) {
+/** Daily book activity: WeRead highlight timestamps, Readwise epub updates, Apple Books lastReadDate. */
+function buildReadingActivity(wereadRawBooks, readwiseBooks, appleBooks = []) {
   const countByDate = new Map();
   const highlightByDate = new Map();
 
@@ -126,6 +158,10 @@ function buildReadingActivity(wereadRawBooks, readwiseBooks) {
   }
 
   for (const b of readwiseBooks) {
+    if (b.lastReadDate) add(b.lastReadDate);
+  }
+
+  for (const b of appleBooks) {
     if (b.lastReadDate) add(b.lastReadDate);
   }
 
@@ -207,7 +243,9 @@ function renderBookCard(book) {
 
   const srcBadge = !book.isLocal && book.source === 'readwise'
     ? `<span class="bk-badge bk-badge-rw">Readwise</span>`
-    : '';
+    : !book.isLocal && book.source === 'appleBooks'
+      ? `<span class="bk-badge bk-badge-ab">Apple Books</span>`
+      : '';
 
   const typeBadge = `<span class="bk-badge bk-badge-type">图书</span>`;
 
@@ -266,14 +304,16 @@ router.get('/books', async (req, res) => {
     Promise.resolve(getAllBooks()),
     loadReadwiseBooks(),
   ]);
-  const wereadBooks = loadWeReadBooks();
+  const wereadBooks  = loadWeReadBooks();
+  const appleBooks   = loadAppleBooks();
 
   const allBooks = [
     ...wereadBooks.sort((a, b) => b.lastReadDate.localeCompare(a.lastReadDate)),
     ...readwiseBooks.sort((a, b) => b.lastReadDate.localeCompare(a.lastReadDate)),
+    ...appleBooks.sort((a, b) => (b.lastReadDate || '').localeCompare(a.lastReadDate || '')),
   ];
 
-  // Dedup by normalized title (Readwise may overlap with WeRead)
+  // Dedup by normalized title (sources may overlap)
   const seen = new Set();
   const dedupedBooks = allBooks.filter(b => {
     const key = b.title.toLowerCase().trim();
@@ -282,32 +322,35 @@ router.get('/books', async (req, res) => {
   });
 
   let filtered = dedupedBooks;
-  if (sourceFilter === 'weread') filtered = dedupedBooks.filter(b => b.source === 'weread');
-  if (sourceFilter === 'readwise') filtered = dedupedBooks.filter(b => b.source === 'readwise');
+  if (sourceFilter === 'weread')     filtered = dedupedBooks.filter(b => b.source === 'weread');
+  if (sourceFilter === 'readwise')   filtered = dedupedBooks.filter(b => b.source === 'readwise');
+  if (sourceFilter === 'appleBooks') filtered = dedupedBooks.filter(b => b.source === 'appleBooks');
 
   const totalFinished = dedupedBooks.filter(b => b.isFinished).length;
-  const totalNotes = dedupedBooks.reduce((s, b) => s + (b.noteCount || 0), 0);
+  const totalNotes    = dedupedBooks.reduce((s, b) => s + (b.noteCount || 0), 0);
 
   // Source tabs
   const tabsHtml = [
-    ['all', `All`, dedupedBooks.length],
-    ['weread', `微信读书`, wereadBooks.length],
-    ['readwise', `Readwise`, readwiseBooks.length],
+    ['all',        'All',          dedupedBooks.length],
+    ['weread',     '微信读书',     wereadBooks.length],
+    ['readwise',   'Readwise',     readwiseBooks.length],
+    ['appleBooks', 'Apple Books',  appleBooks.length],
   ].map(([src, label, count]) =>
     `<a href="?src=${src}" class="lib-tab${sourceFilter === src ? ' active' : ''}">${label} <span class="lib-tab-count">${count}</span></a>`
   ).join('');
 
-  const groupsHtml = renderGroups(filtered);
-  const heatmapHtml = renderHeatmap(buildReadingActivity(wereadRawBooks, readwiseBooks));
+  const groupsHtml  = renderGroups(filtered);
+  const heatmapHtml = renderHeatmap(buildReadingActivity(wereadRawBooks, readwiseBooks, appleBooks));
 
   res.send(await render('books.html', {
-    pageTitle:      'Books — LLM KB',
-    activeNav:      'books',
-    totalBooks:     dedupedBooks.length,
+    pageTitle:       'Books — LLM KB',
+    activeNav:       'books',
+    totalBooks:      dedupedBooks.length,
     totalFinished,
     totalNotes,
-    wereadCount:    wereadBooks.length,
-    readwiseCount:  readwiseBooks.length,
+    wereadCount:     wereadBooks.length,
+    readwiseCount:   readwiseBooks.length,
+    appleCount:      appleBooks.length,
     heatmapHtml,
     tabsHtml,
     groupsHtml,
