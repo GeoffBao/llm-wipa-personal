@@ -10,24 +10,29 @@
  *
  * Writes: Raw/weread-sync-data.json
  *
+ * API structure (as of 2026):
+ *   /web/shelf/sync  → shelf.books[] (flat book objects) + shelf.bookProgress[]
+ *   shelf.books[i]  → { bookId, title, author, cover, categories,
+ *                        readUpdateTime, finishReading, ... }
+ *   shelf.bookProgress[i] → { bookId, progress, readingTime, updateTime }
+ *
  * How to get your cookie:
- *   1. Open https://weread.qq.com in Chrome → log in
+ *   1. Open https://weread.qq.com in your browser → log in
  *   2. DevTools → Network → any /web/ request → Copy → Cookie header value
  *   3. Paste into WEREAD_COOKIE= in .env (no quotes needed)
  */
 
-import { writeFileSync, readFileSync, existsSync } from 'fs';
+import { writeFileSync } from 'fs';
 import { join } from 'path';
 
-// Load config directly (avoid ESM circular issues)
-const VAULT_PATH = process.env.VAULT_PATH || '';
+const VAULT_PATH    = process.env.VAULT_PATH    || '';
 const WEREAD_COOKIE = process.env.WEREAD_COOKIE || '';
 
-if (!VAULT_PATH) { console.error('[weread-sync] VAULT_PATH not set'); process.exit(1); }
+if (!VAULT_PATH)    { console.error('[weread-sync] VAULT_PATH not set'); process.exit(1); }
 if (!WEREAD_COOKIE) { console.error('[weread-sync] WEREAD_COOKIE not set — add it to .env'); process.exit(1); }
 
 const OUT_FILE = join(VAULT_PATH, 'Raw', 'weread-sync-data.json');
-const BASE = 'https://weread.qq.com/web';
+const BASE     = 'https://weread.qq.com/web';
 
 // ── HTTP helper ────────────────────────────────────────────────────────────────
 async function wrGet(path, params = {}) {
@@ -36,10 +41,10 @@ async function wrGet(path, params = {}) {
 
   const res = await fetch(url.toString(), {
     headers: {
-      'Cookie': WEREAD_COOKIE,
+      'Cookie':     WEREAD_COOKIE,
       'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-      'Referer': 'https://weread.qq.com/',
-      'Accept': 'application/json, text/plain, */*',
+      'Referer':    'https://weread.qq.com/',
+      'Accept':     'application/json, text/plain, */*',
     },
   });
 
@@ -68,73 +73,63 @@ function fmtReadingTime(secs) {
   return `${m}分钟`;
 }
 
-// ── Throttle helper ────────────────────────────────────────────────────────────
-const sleep = ms => new Promise(r => setTimeout(r, ms));
-
 // ── Main sync ─────────────────────────────────────────────────────────────────
 async function main() {
   console.log('[weread-sync] Fetching bookshelf…');
 
-  // 1. Get shelf
+  // 1. Get shelf — returns both books[] and bookProgress[]
   const shelf = await wrGet('/shelf/sync', { synckey: 0, teenmode: 0, language: 0 });
-  const bookItems = shelf.books || [];
-  console.log(`[weread-sync] ${bookItems.length} books on shelf`);
+
+  const bookItems    = shelf.books        || [];
+  const progressList = shelf.bookProgress || [];
+
+  console.log(`[weread-sync] ${bookItems.length} books, ${progressList.length} with progress data`);
 
   if (bookItems.length === 0) {
     console.warn('[weread-sync] Empty shelf — check cookie validity');
     process.exit(1);
   }
 
-  // 2. Enrich each book
+  // 2. Build progress lookup map  bookId → progressEntry
+  const progressMap = new Map();
+  for (const p of progressList) {
+    progressMap.set(p.bookId, p);
+  }
+
+  // 3. Build book records — no per-book API calls needed
   const books = [];
   for (let i = 0; i < bookItems.length; i++) {
-    const item = bookItems[i];
-    const bk   = item.book || item;
-    const ri   = item.readInfo || {};
+    const bk = bookItems[i];          // flat book object from shelf.books
+    const pr = progressMap.get(bk.bookId); // may be undefined if never opened
 
     process.stdout.write(`\r[weread-sync] ${i + 1}/${bookItems.length} ${bk.title?.slice(0, 20)}…`);
 
-    let noteCount = 0, reviewCount = 0;
+    const progress    = pr?.progress    || 0;
+    const readingTime = pr?.readingTime || 0;
+    const updateTs    = pr?.updateTime  || bk.readUpdateTime || 0;
 
-    try {
-      // Highlights (type=1) and reviews/notes (type=4)
-      const [hl, rv] = await Promise.all([
-        wrGet('/review/list', { bookId: bk.bookId, type: 1, maxIdx: 0, count: 0, synckey: 0 }),
-        wrGet('/review/list', { bookId: bk.bookId, type: 4, maxIdx: 0, count: 0, synckey: 0 }),
-      ]);
-      noteCount   = hl.total   || 0;
-      reviewCount = rv.total   || 0;
-    } catch (e) {
-      // Non-fatal — continue without counts
-    }
-
-    const progress     = ri.progress || 0;
-    const markedStatus = ri.markedStatus || 0; // 4 = finished
-    const isFinished   = markedStatus === 4 || progress >= 99;
-    const updateTs     = ri.updateTime || 0;
-    const finishedTs   = isFinished ? updateTs : 0;
+    // finishReading=1 on the book item, or progress ≥ 99
+    const isFinished  = bk.finishReading === 1 || progress >= 99;
 
     books.push({
-      bookId:      bk.bookId,
-      title:       bk.title || '',
-      author:      bk.author || '',
-      cover:       bk.cover || '',
+      bookId:       bk.bookId,
+      title:        bk.title        || '',
+      author:       bk.author       || '',
+      cover:        bk.cover        || '',
       progress,
       isFinished,
-      readingTime:  fmtReadingTime(ri.readingTime),
+      readingTime:  fmtReadingTime(readingTime),
       lastReadDate: tsToDate(updateTs),
-      finishedDate: isFinished ? tsToDate(finishedTs) : '',
-      noteCount,
-      reviewCount,
-      category:    bk.categories?.[0]?.title || '',
+      finishedDate: isFinished ? tsToDate(updateTs) : '',
+      noteCount:    0,   // review/list API unavailable (requires signed request)
+      reviewCount:  0,
+      category:     bk.categories?.[0]?.title || bk.category || '',
     });
-
-    await sleep(250); // polite rate-limit
   }
 
   console.log(''); // newline after progress
 
-  // 3. Write output
+  // 4. Write output
   const output = {
     syncedAt: new Date().toISOString(),
     source:   'weread-cookie',
@@ -143,8 +138,9 @@ async function main() {
 
   writeFileSync(OUT_FILE, JSON.stringify(output, null, 2), 'utf8');
   console.log(`[weread-sync] ✓ Wrote ${books.length} books → ${OUT_FILE}`);
-  console.log(`[weread-sync]   Total highlights: ${books.reduce((s, b) => s + b.noteCount, 0)}`);
-  console.log(`[weread-sync]   Finished books:   ${books.filter(b => b.isFinished).length}`);
+  console.log(`[weread-sync]   With progress data: ${books.filter(b => b.progress > 0).length}`);
+  console.log(`[weread-sync]   Finished books:     ${books.filter(b => b.isFinished).length}`);
+  console.log(`[weread-sync]   With reading time:  ${books.filter(b => b.readingTime).length}`);
 }
 
 main().catch(err => {
