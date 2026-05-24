@@ -125,18 +125,31 @@ function main() {
   const bkDb = new Database(findDb(BK_DIR, 'BKLibrary'), { readonly: true });
   const aeDb = new Database(findDb(AE_DIR, 'AEAnnotation'), { readonly: true });
 
-  // ── 1. Annotation counts per book (non-deleted only) ───────────────────────
+  // ── 1. Annotations: counts + text per book (non-deleted only) ────────────────
   const annotationRows = aeDb.prepare(`
-    SELECT ZANNOTATIONASSETID as assetId, COUNT(*) as cnt
+    SELECT
+      ZANNOTATIONASSETID            as assetId,
+      ZANNOTATIONSELECTEDTEXT       as selectedText,
+      ZANNOTATIONNOTE               as note,
+      ZANNOTATIONCREATIONDATE       as createdTs
     FROM ZAEANNOTATION
     WHERE (ZANNOTATIONDELETED = 0 OR ZANNOTATIONDELETED IS NULL)
       AND ZANNOTATIONASSETID != ''
-    GROUP BY ZANNOTATIONASSETID
+      AND ZANNOTATIONSELECTEDTEXT IS NOT NULL
+      AND ZANNOTATIONSELECTEDTEXT != ''
+    ORDER BY ZANNOTATIONCREATIONDATE ASC
   `).all();
 
-  const annotationMap = new Map();
+  const annotationMap  = new Map(); // bookId → count
+  const highlightsMap  = new Map(); // bookId → [{text, note, date}]
   for (const row of annotationRows) {
-    annotationMap.set(row.assetId, row.cnt);
+    annotationMap.set(row.assetId, (annotationMap.get(row.assetId) || 0) + 1);
+    if (!highlightsMap.has(row.assetId)) highlightsMap.set(row.assetId, []);
+    highlightsMap.get(row.assetId).push({
+      text: row.selectedText,
+      note: row.note || '',
+      date: macTsToDate(row.createdTs),
+    });
   }
   aeDb.close();
 
@@ -183,6 +196,7 @@ function main() {
       lastReadDate: macTsToDate(r.lastOpenTs),
       finishedDate: isFinished ? macTsToDate(r.finishedTs || r.lastOpenTs) : '',
       noteCount:    annotationMap.get(r.bookId) || 0,
+      highlights:   highlightsMap.get(r.bookId) || [],
       category:     r.genre || '',
     };
   });

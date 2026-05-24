@@ -42,3 +42,81 @@
   {{{groupsHtml}}}
 
 </div>
+
+<!-- Highlights panel (Apple Books) -->
+<div id="hl-overlay" class="hl-overlay" hidden></div>
+<aside id="hl-panel" class="hl-panel" hidden aria-label="Book highlights">
+  <div class="hl-panel-header">
+    <div class="hl-panel-meta">
+      <div id="hl-panel-title" class="hl-panel-title"></div>
+      <div id="hl-panel-author" class="hl-panel-author"></div>
+    </div>
+    <button id="hl-panel-close" class="hl-panel-close" aria-label="Close">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+  <div id="hl-panel-body" class="hl-panel-body"></div>
+</aside>
+
+<script>
+(function () {
+  const overlay = document.getElementById('hl-overlay');
+  const panel   = document.getElementById('hl-panel');
+  const titleEl = document.getElementById('hl-panel-title');
+  const authorEl= document.getElementById('hl-panel-author');
+  const bodyEl  = document.getElementById('hl-panel-body');
+  const closeBtn= document.getElementById('hl-panel-close');
+
+  function openPanel(data) {
+    titleEl.textContent  = data.title;
+    authorEl.textContent = data.author || '';
+    bodyEl.innerHTML = data.highlights.map((h, i) =>
+      `<div class="hl-item">
+        <div class="hl-item-num">${i + 1}</div>
+        <div class="hl-item-content">
+          <blockquote class="hl-quote">${escHtml(h.text)}</blockquote>
+          ${h.note ? `<div class="hl-note">${escHtml(h.note)}</div>` : ''}
+          ${h.date ? `<div class="hl-date">${h.date}</div>` : ''}
+        </div>
+      </div>`
+    ).join('');
+    overlay.hidden = false;
+    panel.hidden   = false;
+    requestAnimationFrame(() => {
+      overlay.classList.add('hl-visible');
+      panel.classList.add('hl-visible');
+    });
+    bodyEl.scrollTop = 0;
+  }
+
+  function closePanel() {
+    overlay.classList.remove('hl-visible');
+    panel.classList.remove('hl-visible');
+    setTimeout(() => { overlay.hidden = true; panel.hidden = true; }, 250);
+  }
+
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // Delegate click on panel-trigger cards
+  document.addEventListener('click', e => {
+    const card = e.target.closest('.bk-card--panel');
+    if (card) {
+      try { openPanel(JSON.parse(card.dataset.highlights)); } catch {}
+    }
+  });
+
+  // Keyboard: Enter/Space on panel cards
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      const card = e.target.closest('.bk-card--panel');
+      if (card) { e.preventDefault(); try { openPanel(JSON.parse(card.dataset.highlights)); } catch {} }
+    }
+    if (e.key === 'Escape') closePanel();
+  });
+
+  overlay.addEventListener('click', closePanel);
+  closeBtn.addEventListener('click', closePanel);
+})();
+</script>

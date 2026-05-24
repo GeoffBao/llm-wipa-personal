@@ -118,6 +118,7 @@ function loadAppleBooks() {
     isFinished:  b.isFinished || false,
     isLocal:     false,
     category:    b.category || '',
+    highlights:  b.highlights  || [],
   }));
 }
 
@@ -269,8 +270,13 @@ function renderBookCard(book) {
       ${statsHtml}${dateHtml}
     </div>`;
 
-  // Cards without a URL (e.g. Apple Books local epubs) use a <div> — no navigation
+  // Cards without a URL: if has highlights → clickable panel trigger; else static div
   if (!book.url) {
+    if (book.highlights && book.highlights.length > 0) {
+      const payload = JSON.stringify({ title: book.title, author: book.author, highlights: book.highlights })
+        .replace(/&/g, '&amp;').replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+      return `<div class="bk-card bk-card--panel" role="button" tabindex="0" data-highlights='${payload}'>${inner}</div>`;
+    }
     return `<div class="bk-card bk-card--static">${inner}</div>`;
   }
 
