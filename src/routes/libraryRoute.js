@@ -237,15 +237,16 @@ function renderBookCard(book) {
     : '';
   const phHtml = `<div class="bk-cover bk-cover-ph" style="${book.cover ? 'display:none' : ''}">${book.title.slice(0, 2)}</div>`;
 
-  const syncBadge = book.isLocal
-    ? `<span class="bk-badge bk-badge-sync">已同步</span>`
+  const SOURCE_LABELS = {
+    weread:     ['微信读书', 'bk-badge-wr'],
+    readwise:   ['Readwise',    'bk-badge-rw'],
+    appleBooks: ['Apple Books', 'bk-badge-ab'],
+  };
+  const [srcLabel, srcCls] = SOURCE_LABELS[book.source] || ['', ''];
+  const srcBadge = srcLabel
+    ? `<span class="bk-badge ${srcCls}">${srcLabel}</span>`
     : '';
-
-  const srcBadge = !book.isLocal && book.source === 'readwise'
-    ? `<span class="bk-badge bk-badge-rw">Readwise</span>`
-    : !book.isLocal && book.source === 'appleBooks'
-      ? `<span class="bk-badge bk-badge-ab">Apple Books</span>`
-      : '';
+  const syncBadge = '';
 
   const typeBadge = `<span class="bk-badge bk-badge-type">图书</span>`;
 
