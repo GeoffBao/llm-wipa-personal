@@ -1465,6 +1465,11 @@ ul, ol { padding-left: 1.5em; }
   border-color: rgba(26, 86, 219, 0.22);
   text-decoration: none; color: inherit;
 }
+.bk-card--static { cursor: default; }
+.bk-card--static:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-light);
+}
 
 .bk-cover-wrap { flex: 0 0 72px; width: 72px; }
 .bk-cover {

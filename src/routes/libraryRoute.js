@@ -259,17 +259,22 @@ function renderBookCard(book) {
     ? `<div class="bk-date">最近阅读 ${book.lastReadDate}</div>`
     : '';
 
-  const target = book.isLocal ? '' : ' target="_blank" rel="noopener"';
-
-  return `<a href="${book.url}"${target} class="bk-card">
+  const inner = `
     <div class="bk-cover-wrap">${coverHtml}${phHtml}</div>
     <div class="bk-body">
       <div class="bk-title">${book.title}</div>
       ${book.author ? `<div class="bk-author">${book.author}</div>` : ''}
       <div class="bk-badges">${syncBadge}${srcBadge}${typeBadge}${statusBadge}</div>
       ${statsHtml}${dateHtml}
-    </div>
-  </a>`;
+    </div>`;
+
+  // Cards without a URL (e.g. Apple Books local epubs) use a <div> — no navigation
+  if (!book.url) {
+    return `<div class="bk-card bk-card--static">${inner}</div>`;
+  }
+
+  const target = book.isLocal ? '' : ' target="_blank" rel="noopener"';
+  return `<a href="${book.url}"${target} class="bk-card">${inner}</a>`;
 }
 
 // ── Year-grouped sections ──────────────────────────────────────────────────────
