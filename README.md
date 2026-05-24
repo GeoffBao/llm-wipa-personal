@@ -13,9 +13,9 @@ The homepage opens with a bold **Wiki Index** hero card surfacing three domain c
 
 ---
 
-### Library — Unified Reading Shelf
-![Library](docs/screenshots/library.png)
-The **Library** aggregates reading from two sources: **微信读书** (WeRead, 14 books from the vault) and **Readwise** (54 epub books from Reader). A 52-week reading activity heatmap sits at the top. Source tabs let you filter by platform. Each book card shows the cover image, author, progress bar, note count, and reading time — with source badges distinguishing WeRead from Readwise books.
+### Books — Year-Grouped Reading Shelf
+![Books](docs/screenshots/books.png)
+The **Books** page aggregates reading from two sources: **微信读书** (WeRead, 14 books) and **Readwise** (54 epub books). Books are grouped by year (2026年 / 2025年 / 2024年…). Each horizontal card shows cover, title, author, source badges (已同步 · 图书 · 已读/在读), highlight & note counts (划线 X · 想法 X), and last-read date. A 52-week reading activity heatmap based on WeRead highlight timestamps sits at the top. Full dark-mode support.
 
 ---
 
@@ -51,7 +51,7 @@ Every article renders with a sticky right sidebar containing a structured **info
 
 ## What Is This?
 
-LLM WIPA turns your Obsidian markdown vault into a beautiful, fast, locally-served website — no cloud, no sync, no data leaving your machine. It reads your vault files directly and serves them as a Wikipedia-inspired knowledge base with full-text search, a D3 knowledge graph, wikilink navigation, Canvas diagrams, an Excalidraw viewer, a **unified Library** aggregating WeRead + Readwise books, and a **Readwise Reader dashboard** backed by a background sync script.
+LLM WIPA turns your Obsidian markdown vault into a beautiful, fast, locally-served website — no cloud, no sync, no data leaving your machine. It reads your vault files directly and serves them as a Wikipedia-inspired knowledge base with full-text search, a D3 knowledge graph, wikilink navigation, Canvas diagrams, an Excalidraw viewer, a **unified Books page** aggregating WeRead + Readwise books, and a **Readwise Reader dashboard** backed by a background sync script.
 
 Designed for vaults that grow into hundreds or thousands of files, with mixed Chinese/English content, heavy wikilink graphs, and structured metadata.
 
@@ -66,11 +66,13 @@ Designed for vaults that grow into hundreds or thousands of files, with mixed Ch
 - **Browse by section** — Concepts, Sources, Maps, Synthesis, Prompts, Notes, Projects
 - **Browse by tag** — click any tag to see all articles tagged with it
 
-### Library (Unified Reading Shelf)
+### Books (Unified Reading Shelf)
 - **Aggregates two sources** — WeRead vault books (from Obsidian markdown files) + Readwise epub books (from sync data)
-- **52-week reading activity heatmap** at the top of the library page
+- **Year-grouped layout** — books separated by year (2026年 / 2025年 / 2024年…), 3-column responsive grid
+- **Horizontal cards** — cover · title · author · source badges (已同步 / Readwise · 图书 · 已读/在读) · 划线 X · 想法 X · last-read date
+- **52-week reading heatmap** — based on WeRead highlight timestamps, shows highlights count in the last year
 - **Source filter tabs** — All / 微信读书 / Readwise
-- **Book cards** — cover image with placeholder fallback, progress bar, note count, reading time, source badge, finished checkmark
+- **WeRead cookie sync** — `node --env-file=.env scripts/sync-weread.js` fetches fresh noteCount, progress, lastReadDate from WeRead API
 - **Deduplication** — WeRead takes priority when the same book exists in both sources
 
 ### Journey
@@ -95,7 +97,7 @@ Designed for vaults that grow into hundreds or thousands of files, with mixed Ch
 - **Background sync** — `node --env-file=.env scripts/sync-readwise.js` fetches Readwise API v3 and writes a local JSON file; the web page reads that file only — no API calls on page load
 - **Incremental sync** — `--incremental` flag for fast updates; full sync on demand
 - **Dashboard** — saving activity heatmap + top sources bar chart; location tabs; category tabs; reading progress + estimated read time
-- **Library integration** — Readwise epub books also appear in the unified `/library` page
+- **Books integration** — Readwise epub books also appear in the unified `/books` page
 
 ### Design
 - Warm cream background (`#fdf8f0`) with blue/amber accents — easy on the eyes for long reading sessions
@@ -138,7 +140,8 @@ llm-wipa/
 ├── .env.example                # Environment variable template
 │
 ├── scripts/
-│   └── sync-readwise.js        # Background Readwise sync → Raw/readwise-sync-data.json
+│   ├── sync-readwise.js        # Background Readwise sync → Raw/readwise-sync-data.json
+│   └── sync-weread.js          # WeRead cookie sync → Raw/weread-sync-data.json
 │
 ├── src/
 │   ├── vault/
@@ -160,7 +163,7 @@ llm-wipa/
 │       ├── article.js          # GET /wiki/:slug
 │       ├── browse.js           # GET /browse/:section, /browse/tags/:tag
 │       ├── search.js           # GET /search?q=
-│       ├── libraryRoute.js     # GET /library, GET /reading/:slug
+│       ├── libraryRoute.js     # GET /books, GET /reading/:slug
 │       ├── journeyRoute.js     # GET /journey, GET /journey/:date
 │       ├── graph.js            # GET /graph, GET /api/graph
 │       ├── canvasRoute.js      # GET /diagrams, GET /diagrams/:slug
@@ -174,7 +177,7 @@ llm-wipa/
 │   ├── article.html            # Article: two-column layout with sticky sidebar
 │   ├── browse.html             # Section/tag listing
 │   ├── search.html             # Search results
-│   ├── library.html            # Unified library: heatmap + source tabs + book grid
+│   ├── books.html              # Books: year-grouped heatmap + source tabs + book cards
 │   ├── journey.html            # Journey timeline with activity heatmap
 │   ├── readwise.html           # Readwise dashboard: heatmap + top sources + feed
 │   ├── graph.html              # Full-screen D3 graph (standalone, no layout)
@@ -261,7 +264,22 @@ node --env-file=.env scripts/sync-readwise.js
 node --env-file=.env scripts/sync-readwise.js --incremental
 ```
 
-The script writes `Raw/readwise-sync-data.json` into your vault. The web server reads this file on page load — no live API calls required, so the dashboard is always instant.
+The script writes `Raw/readwise-sync-data.json` into your vault. The web server reads this file on page load — no live API calls, always instant.
+
+### Sync WeRead (微信读书)
+
+Fetch fresh book metadata (progress, highlight counts, last-read dates) from WeRead:
+
+```bash
+node --env-file=.env scripts/sync-weread.js
+```
+
+Required in `.env`:
+```env
+WEREAD_COOKIE=<full cookie string from weread.qq.com>
+```
+
+**How to get your cookie:** Open `weread.qq.com` in your browser → log in → DevTools → Network → any `/web/` request → copy the `Cookie` request header. Paste the full value as `WEREAD_COOKIE=` in `.env`. The script writes `Raw/weread-sync-data.json`; the Books page picks it up automatically on next load.
 
 ---
 
@@ -299,7 +317,7 @@ Wiki/
 Additional paths indexed automatically:
 - `Notes/` — personal notes (browseable, searchable)
 - `Projects/` — project documentation
-- `Raw/weread/` — WeRead book highlights (shown in Library)
+- `Raw/weread/` — WeRead book highlights (shown in Books page)
 - `Journey/` — daily memory entries (shown in Journey timeline)
 
 ### Metadata Format
@@ -397,7 +415,7 @@ Add the `raycast-scripts/` folder in Raycast → Extensions → Script Commands.
 | `GET /browse/:section` | All articles in a section |
 | `GET /browse/tags/:tag` | All articles with a tag |
 | `GET /search?q=` | Full-text search results |
-| `GET /library` | Unified library — WeRead + Readwise books with heatmap |
+| `GET /books` | Unified books — WeRead + Readwise, year-grouped with heatmap |
 | `GET /reading/:slug` | Individual WeRead book page |
 | `GET /journey` | Daily memory timeline with activity heatmap |
 | `GET /journey/:date` | Single journey entry |
