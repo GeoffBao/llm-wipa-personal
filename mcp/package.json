@@ -1,0 +1,14 @@
+{
+  "name": "llm-kb-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP server for Eason's personal knowledge base (Readwise + Obsidian Wiki)",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "zod": "^3.23.0"
+  }
+}

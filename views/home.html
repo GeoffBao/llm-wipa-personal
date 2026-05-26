@@ -1,3 +1,116 @@
+<style>
+.mcp-setup-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  background: var(--blue-light);
+  border: 1px solid var(--blue);
+  border-radius: var(--radius);
+  padding: 0.875rem 1rem;
+  margin-bottom: 1.25rem;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+.mcp-setup-banner-icon {
+  font-size: 1.25rem;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.mcp-setup-banner-body { flex: 1; min-width: 0; }
+.mcp-setup-banner-title {
+  font-weight: 600;
+  color: var(--blue);
+  margin-bottom: 0.2rem;
+}
+.mcp-setup-banner-desc { color: var(--text); margin-bottom: 0.6rem; }
+.mcp-setup-banner-code {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  padding: 0.5rem 0.75rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  white-space: pre;
+  overflow-x: auto;
+  margin-bottom: 0.6rem;
+}
+.mcp-setup-banner-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.mcp-copy-btn, .mcp-dismiss-btn {
+  padding: 0.3rem 0.75rem;
+  border-radius: var(--radius-xs);
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid;
+  transition: background .15s, color .15s;
+}
+.mcp-copy-btn {
+  background: var(--blue);
+  border-color: var(--blue);
+  color: #fff;
+}
+.mcp-copy-btn:hover { opacity: .85; }
+.mcp-dismiss-btn {
+  background: transparent;
+  border-color: var(--border);
+  color: var(--text-muted);
+}
+.mcp-dismiss-btn:hover { border-color: var(--text-muted); color: var(--text); }
+</style>
+
+<div id="mcp-setup-banner" class="mcp-setup-banner" style="display:none">
+  <div class="mcp-setup-banner-icon">🔌</div>
+  <div class="mcp-setup-banner-body">
+    <div class="mcp-setup-banner-title">Connect Raycast AI to your Knowledge Base</div>
+    <div class="mcp-setup-banner-desc">
+      Add the MCP server to Raycast so your AI queries automatically pull from your Readwise library and Wiki.
+      Go to <strong>Raycast → Settings → Extensions → AI → MCP Servers</strong> and paste:
+    </div>
+    <div class="mcp-setup-banner-code" id="mcp-config-code">{
+  "llm-kb": {
+    "command": "node",
+    "args": ["/Users/admin/Documents/ClaudeCode/llm-wipa/mcp/index.js"],
+    "env": {
+      "VAULT_PATH": "/Users/admin/Workspace/Resources/obsidian/AI-KN-Base",
+      "KB_API_URL": "http://localhost:3000"
+    }
+  }
+}</div>
+    <div class="mcp-setup-banner-actions">
+      <button class="mcp-copy-btn" id="mcp-copy-btn">Copy config</button>
+      <button class="mcp-dismiss-btn" id="mcp-dismiss-btn">Dismiss</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var STORAGE_KEY = 'llm-kb-mcp-setup-dismissed';
+  var banner = document.getElementById('mcp-setup-banner');
+  if (!banner) return;
+
+  // Show only if not dismissed
+  if (!localStorage.getItem(STORAGE_KEY)) {
+    banner.style.display = 'flex';
+  }
+
+  document.getElementById('mcp-dismiss-btn').addEventListener('click', function () {
+    localStorage.setItem(STORAGE_KEY, '1');
+    banner.style.display = 'none';
+  });
+
+  document.getElementById('mcp-copy-btn').addEventListener('click', function () {
+    var code = document.getElementById('mcp-config-code').textContent;
+    navigator.clipboard.writeText(code).then(function () {
+      var btn = document.getElementById('mcp-copy-btn');
+      btn.textContent = 'Copied!';
+      setTimeout(function () { btn.textContent = 'Copy config'; }, 2000);
+    });
+  });
+})();
+</script>
+
 <div class="home-page">
 
   <!-- Wiki Index Hero -->
@@ -16,7 +129,10 @@
       </div>
       <div class="index-hero-actions">
         <a href="/wiki/wiki-index" class="index-hero-btn">Browse Full Index →</a>
-        <a href="/readwise/chat" class="index-hero-btn index-hero-btn--ghost">Readwise Chat</a>
+        <a href="/chat" class="index-hero-btn index-hero-btn--ghost">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          Chat with KB
+        </a>
       </div>
     </div>
     <div class="index-domains">

@@ -1,0 +1,857 @@
+<style>
+/* ── Lock body/layout containers on chat page ── */
+body:has(.chat-page) {
+  overflow: hidden;
+}
+body:has(.chat-page) .page-body {
+  height: calc(100vh - 54px);
+  min-height: unset;
+  overflow: hidden;
+}
+body:has(.chat-page) .main-content {
+  padding: 0;
+  overflow: hidden;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+body:has(.chat-page) .site-footer {
+  display: none;
+}
+
+/* ── Chat page layout ── */
+.chat-page {
+  display: flex;
+  gap: var(--space-5);
+  flex: 1 1 0;
+  min-height: 0;
+  padding: var(--space-5) var(--space-6);
+  max-width: 1280px;
+  margin: 0 auto;
+  width: 100%;
+  overflow: hidden;
+}
+
+/* ── Left: conversation panel ── */
+.chat-main {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.chat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+.chat-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--heading-color);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.chat-title svg { color: var(--blue); }
+.chat-meta { font-size: 0.78rem; color: var(--text-muted); }
+.vector-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--blue-light);
+  color: var(--blue);
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+.vector-badge.off { background: #fef2f2; color: #b91c1c; }
+
+.chat-messages {
+  flex: 1 1 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  scroll-behavior: smooth;
+}
+
+.chat-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  color: var(--text-muted);
+  text-align: center;
+}
+.chat-empty svg { opacity: 0.3; }
+.chat-empty p { font-size: 0.875rem; max-width: 320px; line-height: 1.6; }
+.chat-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  justify-content: center;
+  margin-top: var(--space-2);
+}
+.chat-suggestion {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  font-size: 0.8rem;
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+}
+.chat-suggestion:hover { border-color: var(--blue); background: var(--blue-light); color: var(--blue); }
+
+/* ── Message bubbles ── */
+.msg { display: flex; gap: var(--space-3); max-width: 100%; }
+.msg.user { flex-direction: row-reverse; }
+.msg-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.msg.user .msg-avatar { background: var(--blue); color: #fff; }
+.msg.assistant .msg-avatar { background: var(--border); color: var(--text-muted); }
+.msg-body { max-width: calc(100% - 44px); }
+.msg-bubble {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius);
+  line-height: 1.65;
+  font-size: 0.9rem;
+}
+.msg.user .msg-bubble {
+  background: var(--blue);
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+.msg.assistant .msg-bubble {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-bottom-left-radius: 4px;
+  color: var(--text);
+}
+.msg-bubble p { margin: 0 0 0.6em; }
+.msg-bubble p:last-child { margin-bottom: 0; }
+.msg-bubble h1,.msg-bubble h2,.msg-bubble h3 {
+  font-size: 1em;
+  font-weight: 600;
+  margin: 0.8em 0 0.3em;
+}
+.msg-bubble ul,.msg-bubble ol { margin: 0.4em 0 0.6em 1.2em; }
+.msg-bubble li { margin: 0.2em 0; }
+.msg-bubble code {
+  font-family: var(--font-mono);
+  font-size: 0.82em;
+  background: rgba(0,0,0,0.06);
+  border-radius: 3px;
+  padding: 0.1em 0.35em;
+}
+.msg.user .msg-bubble code { background: rgba(255,255,255,0.2); }
+.msg-bubble pre {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  padding: var(--space-3);
+  overflow-x: auto;
+  margin: 0.5em 0;
+}
+.msg-bubble pre code { background: none; padding: 0; }
+.msg-bubble blockquote {
+  border-left: 3px solid var(--border);
+  margin: 0.5em 0;
+  padding-left: var(--space-3);
+  color: var(--text-muted);
+}
+.msg-bubble strong { font-weight: 600; }
+
+.thinking-dots { display: inline-flex; gap: 4px; align-items: center; padding: 2px 0; }
+.thinking-dots span {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  animation: blink 1.2s infinite;
+}
+.thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
+.thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes blink { 0%,80%,100% { opacity:.2 } 40% { opacity:1 } }
+
+/* ── Input area ── */
+.chat-input-area {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.chat-input-row {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-end;
+}
+.chat-textarea {
+  flex: 1;
+  min-height: 48px;
+  max-height: 160px;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  color: var(--text);
+  background: var(--bg-card);
+  resize: none;
+  line-height: 1.5;
+  transition: border-color .15s;
+  overflow-y: hidden;
+}
+.chat-textarea:focus { outline: none; border-color: var(--blue); }
+.chat-send-btn {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border: none;
+  background: var(--blue);
+  color: #fff;
+  border-radius: var(--radius);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .15s, opacity .15s;
+}
+.chat-send-btn:hover { background: var(--blue-hover); }
+.chat-send-btn:disabled { opacity: .45; cursor: not-allowed; }
+.chat-input-hint {
+  font-size: 0.75rem;
+  color: var(--text-light);
+  padding: 0 2px;
+}
+
+/* ── Right: sources panel ── */
+.chat-sidebar {
+  width: 280px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-height: 0;
+  overflow: hidden;
+}
+.sources-panel {
+  flex: 1 1 0;
+  min-height: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+#sources-list {
+  flex: 1 1 0;
+  overflow-y: auto;
+  min-height: 0;
+}
+.sources-panel-header {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.sources-count {
+  background: var(--border);
+  color: var(--text-muted);
+  border-radius: 999px;
+  padding: 1px 7px;
+  font-size: 0.7rem;
+}
+.sources-empty {
+  padding: var(--space-4);
+  font-size: 0.8rem;
+  color: var(--text-light);
+  text-align: center;
+}
+.source-item {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border-light);
+  cursor: default;
+}
+.source-item:last-child { border-bottom: none; }
+.source-ref {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  margin-right: 6px;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+.source-ref.raw { background: #fef3c7; color: #92400e; }
+.source-ref.wiki { background: var(--blue-light); color: var(--blue); }
+.source-title {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text);
+  line-height: 1.35;
+}
+.source-title a { color: var(--text); }
+.source-title a:hover { color: var(--blue); }
+.source-meta {
+  font-size: 0.72rem;
+  color: var(--text-light);
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.source-score {
+  background: var(--bg);
+  border: 1px solid var(--border-light);
+  border-radius: 3px;
+  padding: 0 4px;
+  font-size: 0.68rem;
+  font-family: var(--font-mono);
+}
+.source-summary {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.chat-controls {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--space-3) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.chat-controls label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.chat-controls select, .chat-controls input[type=checkbox] {
+  cursor: pointer;
+}
+.chat-controls select {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  background: var(--bg);
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  color: var(--text);
+}
+.control-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 0.8rem;
+  color: var(--text);
+}
+.clear-btn {
+  width: 100%;
+  padding: var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  background: transparent;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: border-color .15s, color .15s;
+  margin-top: var(--space-1);
+}
+.clear-btn:hover { border-color: #dc2626; color: #dc2626; }
+
+/* ── Citation ref links [R1] [W1] ── */
+.cite-ref {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5px;
+  height: 18px;
+  border-radius: 3px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  vertical-align: middle;
+  text-decoration: none !important;
+  cursor: pointer;
+  transition: opacity .15s;
+}
+.cite-ref:hover { opacity: 0.75; }
+.cite-raw  { background: #fef3c7; color: #92400e; }
+.cite-wiki { background: var(--blue-light); color: var(--blue); }
+a.cite-ref { text-decoration: none; }
+
+/* ── Mermaid error fallback ── */
+.mermaid-error {
+  border: 1px solid #fca5a5;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  margin: 0.6em 0;
+}
+.mermaid-error-header {
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 5px 10px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.mermaid-error pre {
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  background: var(--bg-card);
+  font-size: 0.78rem;
+}
+
+/* ── Tables inside chat bubbles ── */
+.msg-bubble .table-wrap { overflow-x: auto; margin: 0.6em 0; }
+.msg-bubble table { border-collapse: collapse; font-size: 0.82em; width: 100%; }
+.msg-bubble th, .msg-bubble td {
+  border: 1px solid var(--border);
+  padding: 5px 10px;
+  text-align: left;
+  line-height: 1.4;
+}
+.msg-bubble th { background: var(--bg); font-weight: 600; }
+.msg-bubble tr:nth-child(even) td { background: var(--bg-hover); }
+.msg.user .msg-bubble th { background: rgba(255,255,255,0.15); }
+.msg.user .msg-bubble td { border-color: rgba(255,255,255,0.25); }
+.msg.user .msg-bubble tr:nth-child(even) td { background: rgba(255,255,255,0.08); }
+
+/* ── Mermaid diagrams inside chat bubbles ── */
+.msg-bubble .mermaid {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+  margin: 0.6em 0;
+  overflow-x: auto;
+  text-align: center;
+}
+.msg-bubble .mermaid svg { max-width: 100%; height: auto; }
+
+@media (max-width: 900px) {
+  .chat-page { flex-direction: column; height: auto; }
+  .chat-main { height: 70vh; }
+  .chat-sidebar { width: 100%; flex-direction: row; overflow-x: auto; }
+  .sources-panel, .chat-controls { min-width: 240px; }
+}
+</style>
+
+<div class="chat-page">
+
+  <!-- Left: conversation -->
+  <div class="chat-main">
+    <div class="chat-header">
+      <div class="chat-title">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+        Chat with Knowledge Base
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span id="vector-badge" class="vector-badge {{#if vectorReady}}{{else}}off{{/if}}">
+          {{#if vectorReady}}
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg>
+            {{vectorCount}} articles indexed
+          {{else}}
+            Index not ready
+          {{/if}}
+        </span>
+        <span class="chat-meta" id="model-label">{{model}}</span>
+      </div>
+    </div>
+
+    <div class="chat-messages" id="chat-messages">
+      <div class="chat-empty" id="chat-empty">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        <p>Ask anything. I'll search your Readwise library and Wiki, then answer using your own knowledge.</p>
+        <div class="chat-suggestions">
+          <button class="chat-suggestion" data-q="什么是第二大脑？我保存了哪些相关内容">第二大脑</button>
+          <button class="chat-suggestion" data-q="AI Agent 架构设计有哪些关键模式">AI Agent 架构</button>
+          <button class="chat-suggestion" data-q="PKM 工作流如何和 AI 结合">PKM + AI</button>
+          <button class="chat-suggestion" data-q="相机影像性能优化有哪些关键方法">Camera 性能优化</button>
+          <button class="chat-suggestion" data-q="onboarding 和用户留存有什么关系">Onboarding 留存</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="chat-input-area">
+      <div class="chat-input-row">
+        <textarea
+          id="chat-input"
+          class="chat-textarea"
+          placeholder="Ask anything about your knowledge base…"
+          rows="1"
+          autofocus
+        ></textarea>
+        <button id="chat-send" class="chat-send-btn" aria-label="Send">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+          </svg>
+        </button>
+      </div>
+      <div class="chat-input-hint">Enter to send · Shift+Enter for new line</div>
+    </div>
+  </div>
+
+  <!-- Right: sources + controls -->
+  <div class="chat-sidebar">
+    <div class="sources-panel">
+      <div class="sources-panel-header">
+        Sources
+        <span class="sources-count" id="sources-count">0</span>
+      </div>
+      <div id="sources-list">
+        <div class="sources-empty">Sources used by the last answer will appear here.</div>
+      </div>
+    </div>
+
+    <div class="chat-controls">
+      <label>Model</label>
+      <select id="model-select">
+        <option value="deepseek-chat" selected>deepseek-chat (fast)</option>
+        <option value="deepseek-reasoner">deepseek-reasoner (deep)</option>
+      </select>
+      <div class="control-row">
+        <input type="checkbox" id="use-wiki" checked>
+        <label for="use-wiki" style="text-transform:none;letter-spacing:0;font-weight:400">Include Wiki layer</label>
+      </div>
+      <button class="clear-btn" id="clear-btn">Clear conversation</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── Markdown renderer — handles tables, mermaid, code, lists, headers ──
+function renderMarkdown(md) {
+  // 1. Stash mermaid blocks (keep raw, unescaped)
+  const mermaidBlocks = [];
+  md = md.replace(/```mermaid\r?\n([\s\S]*?)```/g, (_, code) => {
+    const i = mermaidBlocks.length;
+    mermaidBlocks.push(code);
+    return `\x00M${i}\x00`;
+  });
+
+  // 2. Stash other code blocks
+  const codeBlocks = [];
+  md = md.replace(/```(\w*)\r?\n?([\s\S]*?)```/g, (_, lang, code) => {
+    const i = codeBlocks.length;
+    codeBlocks.push({ lang, code });
+    return `\x00C${i}\x00`;
+  });
+
+  // 3. HTML-escape the rest
+  md = md.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+  // 4. Inline: code, bold, italic
+  md = md.replace(/`([^`]+)`/g, '<code>$1</code>');
+  md = md.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  md = md.replace(/\*(.+?)\*/g, '<em>$1</em>');
+
+  // 5. Headers
+  md = md.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+  md = md.replace(/^## (.+)$/gm,  '<h2>$1</h2>');
+  md = md.replace(/^# (.+)$/gm,   '<h1>$1</h1>');
+
+  // 6. Blockquote
+  md = md.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
+
+  // 7. Tables — match header | sep | rows block
+  md = md.replace(/^(\|.+\|[ \t]*\n)([ \t]*\|[ \t]*[-:]+[-| \t:]*\|\n)((?:[ \t]*\|.+\|[ \t]*\n?)*)/gm, (_, header, _sep, body) => {
+    const parseRow = row => row.split('|').slice(1, -1).map(c => c.trim());
+    const ths = parseRow(header).map(c => `<th>${c}</th>`).join('');
+    const rows = body.trim().split('\n').filter(Boolean).map(line =>
+      '<tr>' + parseRow(line).map(c => `<td>${c}</td>`).join('') + '</tr>'
+    ).join('');
+    return `<div class="table-wrap"><table><thead><tr>${ths}</tr></thead><tbody>${rows}</tbody></table></div>\n`;
+  });
+
+  // 8. Lists (unordered + ordered)
+  md = md.replace(/^[ \t]*[-*] (.+)$/gm, '<li>$1</li>');
+  md = md.replace(/^[ \t]*\d+\. (.+)$/gm, '<li>$1</li>');
+  md = md.replace(/(<li>[\s\S]*?<\/li>\n?)+/g, s => `<ul>${s}</ul>`);
+
+  // 9. Paragraphs — wrap plain text blocks
+  md = md.split(/\n{2,}/).map(block => {
+    block = block.trim();
+    if (!block) return '';
+    if (/^<[a-zA-Z\x00]/.test(block)) return block;
+    return `<p>${block.replace(/\n/g, '<br>')}</p>`;
+  }).join('\n');
+
+  // 10. Restore code blocks
+  md = md.replace(/\x00C(\d+)\x00/g, (_, i) => {
+    const { lang, code } = codeBlocks[+i];
+    const esc = code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    return `<pre><code class="language-${lang}">${esc}</code></pre>`;
+  });
+
+  // 11. Restore mermaid blocks — store raw source for error fallback
+  md = md.replace(/\x00M(\d+)\x00/g, (_, i) => {
+    const raw = mermaidBlocks[+i];
+    const encoded = encodeURIComponent(raw);
+    return `<div class="mermaid-wrap"><div class="mermaid" data-raw="${encoded}">${raw}</div></div>`;
+  });
+
+  return md;
+}
+
+const messagesEl = document.getElementById('chat-messages');
+const emptyEl    = document.getElementById('chat-empty');
+const inputEl    = document.getElementById('chat-input');
+const sendBtn    = document.getElementById('chat-send');
+const sourcesList= document.getElementById('sources-list');
+const sourcesCount=document.getElementById('sources-count');
+const modelSelect= document.getElementById('model-select');
+const useWikiCb  = document.getElementById('use-wiki');
+const clearBtn   = document.getElementById('clear-btn');
+
+let history = []; // { role, content }
+let isStreaming = false;
+let currentRawSources = [];
+let currentWikiSources = [];
+
+// Convert [R1] [W1] citations to clickable links using current sources
+function linkifyCitations(html) {
+  html = html.replace(/\[R(\d+)\]/g, (_, n) => {
+    const s = currentRawSources[+n - 1];
+    if (!s?.url) return `<span class="cite-ref cite-raw">[R${n}]</span>`;
+    return `<a href="${s.url}" target="_blank" rel="noopener" class="cite-ref cite-raw" title="${escHtml(s.title)}">[R${n}]</a>`;
+  });
+  html = html.replace(/\[W(\d+)\]/g, (_, n) => {
+    const w = currentWikiSources[+n - 1];
+    if (!w?.slug) return `<span class="cite-ref cite-wiki">[W${n}]</span>`;
+    return `<a href="/wiki/${w.slug}" class="cite-ref cite-wiki" title="${escHtml(w.title)}">[W${n}]</a>`;
+  });
+  return html;
+}
+
+// ── Auto-resize textarea ──
+inputEl.addEventListener('input', () => {
+  inputEl.style.height = 'auto';
+  inputEl.style.height = Math.min(inputEl.scrollHeight, 160) + 'px';
+});
+
+// ── Send on Enter (Shift+Enter = newline) ──
+inputEl.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+});
+sendBtn.addEventListener('click', sendMessage);
+
+// ── Suggestion chips ──
+document.querySelectorAll('.chat-suggestion').forEach(btn => {
+  btn.addEventListener('click', () => {
+    inputEl.value = btn.dataset.q;
+    sendMessage();
+  });
+});
+
+// ── Clear ──
+clearBtn.addEventListener('click', () => {
+  history = [];
+  messagesEl.innerHTML = '';
+  messagesEl.appendChild(emptyEl);
+  emptyEl.style.display = '';
+  sourcesList.innerHTML = '<div class="sources-empty">Sources used by the last answer will appear here.</div>';
+  sourcesCount.textContent = '0';
+});
+
+function appendMessage(role, content) {
+  emptyEl.style.display = 'none';
+  const div = document.createElement('div');
+  div.className = 'msg ' + role;
+  div.innerHTML = `
+    <div class="msg-avatar">${role === 'user' ? 'E' : 'AI'}</div>
+    <div class="msg-body">
+      <div class="msg-bubble" data-role="${role}"></div>
+    </div>`;
+  const bubble = div.querySelector('.msg-bubble');
+  if (role === 'user') {
+    bubble.textContent = content;
+  } else {
+    bubble.innerHTML = '<div class="thinking-dots"><span></span><span></span><span></span></div>';
+  }
+  messagesEl.appendChild(div);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+  return bubble;
+}
+
+function renderSources(rawSources, wikiSources) {
+  const total = rawSources.length + wikiSources.length;
+  sourcesCount.textContent = String(total);
+
+  if (total === 0) {
+    sourcesList.innerHTML = '<div class="sources-empty">No relevant sources found for this query.</div>';
+    return;
+  }
+
+  let html = '';
+  rawSources.forEach((s, i) => {
+    const scoreStr = (s.score * 100).toFixed(0) + '%';
+    const titleHtml = s.url
+      ? `<a href="${s.url}" target="_blank" rel="noopener">${escHtml(s.title)}</a>`
+      : escHtml(s.title);
+    html += `<div class="source-item">
+      <div><span class="source-ref raw">R${i+1}</span><span class="source-title">${titleHtml}</span></div>
+      <div class="source-meta">
+        ${s.author ? '<span>' + escHtml(s.author) + '</span>' : ''}
+        <span class="source-score">${scoreStr}</span>
+        <span>${s.category || ''}</span>
+      </div>
+      ${s.summary ? '<div class="source-summary">' + escHtml(s.summary) + '</div>' : ''}
+    </div>`;
+  });
+  wikiSources.forEach((w, i) => {
+    html += `<div class="source-item">
+      <div><span class="source-ref wiki">W${i+1}</span><span class="source-title"><a href="/wiki/${w.slug}">${escHtml(w.title)}</a></span></div>
+      <div class="source-meta"><span>${w.section || 'wiki'}</span></div>
+    </div>`;
+  });
+  sourcesList.innerHTML = html;
+}
+
+function escHtml(s) {
+  return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+async function sendMessage() {
+  const text = inputEl.value.trim();
+  if (!text || isStreaming) return;
+
+  inputEl.value = '';
+  inputEl.style.height = 'auto';
+  isStreaming = true;
+  sendBtn.disabled = true;
+
+  history.push({ role: 'user', content: text });
+  appendMessage('user', text);
+  const aiBubble = appendMessage('assistant', '');
+
+  let fullContent = '';
+
+  try {
+    const resp = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messages: history.slice(-12), // keep last 6 turns
+        useWiki: useWikiCb.checked,
+        model: modelSelect.value,
+      }),
+    });
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop();
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const raw = line.slice(6).trim();
+        if (!raw) continue;
+        let evt;
+        try { evt = JSON.parse(raw); } catch { continue; }
+
+        if (evt.type === 'sources') {
+          currentRawSources = evt.rawSources || [];
+          currentWikiSources = evt.wikiSources || [];
+          renderSources(currentRawSources, currentWikiSources);
+        } else if (evt.type === 'delta') {
+          fullContent += evt.content;
+          aiBubble.innerHTML = linkifyCitations(renderMarkdown(fullContent));
+          messagesEl.scrollTop = messagesEl.scrollHeight;
+        } else if (evt.type === 'error') {
+          aiBubble.innerHTML = '<span style="color:#dc2626">Error: ' + escHtml(evt.message) + '</span>';
+        }
+      }
+    }
+  } catch (err) {
+    aiBubble.innerHTML = '<span style="color:#dc2626">Network error: ' + escHtml(err.message) + '</span>';
+  }
+
+  if (fullContent) {
+    history.push({ role: 'assistant', content: fullContent });
+    // Run mermaid on any diagrams in the final bubble, fall back to code on error
+    const diagrams = [...aiBubble.querySelectorAll('.mermaid')];
+    if (diagrams.length && window.mermaid) {
+      const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+      mermaid.initialize({ startOnLoad: false, theme: dark ? 'dark' : 'default', securityLevel: 'loose' });
+      for (const node of diagrams) {
+        try {
+          await mermaid.run({ nodes: [node] });
+          // Detect render error: mermaid writes "Syntax error" text into the SVG
+          const svgText = node.querySelector('svg')?.textContent || '';
+          if (svgText.includes('Syntax error') || svgText.includes('Parse error')) {
+            throw new Error('mermaid syntax error');
+          }
+        } catch {
+          // Replace with readable code block + link to mermaid.live
+          const raw = decodeURIComponent(node.dataset.raw || '');
+          const wrap = node.closest('.mermaid-wrap') || node;
+          wrap.outerHTML = `<div class="mermaid-error">
+            <div class="mermaid-error-header">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              Mermaid syntax error — showing raw code
+            </div>
+            <pre><code class="language-mermaid">${raw.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</code></pre>
+          </div>`;
+        }
+      }
+    }
+  }
+  isStreaming = false;
+  sendBtn.disabled = false;
+  inputEl.focus();
+}
+</script>

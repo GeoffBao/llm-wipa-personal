@@ -1,5 +1,6 @@
 # Dependencies
 node_modules/
+mcp/node_modules/
 
 # Local configuration (contains personal vault paths)
 .env

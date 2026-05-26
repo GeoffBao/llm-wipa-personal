@@ -23,6 +23,9 @@ import { loadExcalidrawFiles } from './src/vault/excalidraw.js';
 import readwiseRouter from './src/routes/readwiseRoute.js';
 import flipbookRouter from './src/routes/flipbookRoute.js';
 import journeyRouter from './src/routes/journeyRoute.js';
+import semanticSearchRouter from './src/routes/semanticSearch.js';
+import { loadVectorStore } from './src/search/vectorStore.js';
+import chatRouter from './src/routes/chatRoute.js';
 import { CACHE_DIR as FLIPBOOK_CACHE_DIR } from './src/services/flipbook.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -57,6 +60,8 @@ app.use(excalidrawRouter);
 app.use(readwiseRouter);
 app.use(flipbookRouter);
 app.use(journeyRouter);
+app.use(semanticSearchRouter);
+app.use(chatRouter);
 
 // Debounced vault watcher
 let rebuildTimer = null;
@@ -83,7 +88,20 @@ async function start() {
   buildAssetIndex();
   await loadCanvases();
   await loadExcalidrawFiles();
+  loadVectorStore(); // non-blocking: semantic search available once index loads
+
+  // Hot-reload vector index when daily cron updates it
+  const indexFile = join(VAULT_PATH, 'Raw', 'readwise-vector-index.json');
+  chokidar.watch(indexFile, { ignoreInitial: true })
+    .on('change', () => { loadVectorStore(); console.log('[watcher] Vector index reloaded'); });
   console.log(`[boot] Ready: ${files.length} files indexed`);
+
+  // Watch views/ templates — clear cache on change
+  const viewsDir = join(__dirname, 'views');
+  chokidar.watch(`${viewsDir}/**/*.html`, {
+    ignoreInitial: true,
+    awaitWriteFinish: { stabilityThreshold: 300, pollInterval: 100 },
+  }).on('change', () => { clearCache(); console.log('[watcher] Template cache cleared'); });
 
   // Watch Wiki, Notes, Projects for changes
   const wikiDir = join(VAULT_PATH, 'Wiki');
