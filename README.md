@@ -16,6 +16,66 @@ Everything runs on your machine. Nothing leaves it.
 
 ---
 
+## Philosophy: KB × Agent — The Bidirectional Loop
+
+LLM WIPA is built on one core idea: **your personal knowledge base and your AI agents should continuously feed each other.**
+
+Most people use AI and their notes as two separate systems. The insight here is to make them one loop — where every conversation enriches the KB, and every KB entry sharpens the next conversation.
+
+### How the loop works
+
+```
+You (reading, working, thinking)
+        │
+        ▼
+  AI Agents ──────── query ──────────► KB (via MCP)
+  (Claude Code,                         │
+   Raycast AI,      ◄── enriched ───────┘
+   Cursor, Craft,        answers
+   Hermes, ...)
+        │
+        │ write back (automations)
+        ▼
+  KB grows smarter
+```
+
+**KB → Agent (Pull direction)**
+
+Every agent you work with queries the KB via the built-in MCP server before answering. Claude Code reads `CLAUDE.md` which instructs it to check the Wiki index first. Raycast AI pulls from `search_readwise` and `search_wiki`. Cursor and other MCP-compatible tools do the same. Your personal context — curated notes, highlights, frameworks — shapes every answer instead of relying on generic model knowledge.
+
+Key MCP tools exposed:
+
+| Tool | What it gives agents |
+|---|---|
+| `search_wiki` | Keyword search over your compiled wiki articles |
+| `search_readwise` | Semantic search over 2000+ Readwise highlights |
+| `read_wiki_article` | Full markdown of any article by slug |
+| `ask_knowledge_base` | Full RAG answer with citation links |
+
+**Agent → KB (Push direction)**
+
+Agents write back into the KB through daily and weekly automations:
+
+| Automation | What flows in | Destination |
+|---|---|---|
+| Daily AI Signal Brief | AI news digest, camera engineering signals | `Journey/YYYY-MM-DD.md` |
+| Memory journal sync | Key decisions and insights from conversations | `Journey/YYYY-MM-DD.md` |
+| Readwise daily sync | New highlights and articles (07:00 cron) | `Raw/readwise-sync-data.json` |
+| Tana → Wiki export | `#wiki` tagged Tana nodes | `Wiki/sources/` |
+| Tana literature sync | `#literature-note`, `#book`, `#article` nodes | `Wiki/sources/` |
+| wiki-ingest | Any article or video studied | `Wiki/sources/` + concepts |
+| Work indexer | Project docs and work notes | `Raw/work/` |
+
+**The shared skill layer**
+
+A unified set of skills runs across all agent frontends — Claude Code, Craft Agents, Raycast AI, Cursor, Hermes. The same `wiki-query`, `wiki-ingest`, `memory-journal-sync`, and `tana-wiki-export` skills reach into the same vault regardless of which surface you're working from. You write a skill once; every agent benefits.
+
+**The result**
+
+Your KB grows with every session. Agents don't start cold — they start from your accumulated understanding. Over time the loop compounds: richer KB → better agent answers → more insights worth capturing → richer KB.
+
+---
+
 ## Screenshots
 
 | Homepage | Chat with KB | Knowledge Graph |

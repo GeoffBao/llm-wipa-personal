@@ -1,3 +1,17 @@
+## Project Philosophy: KB × Agent Bidirectional Loop
+
+LLM WIPA is the shared brain across all of Eason's AI agents. The central design principle is a **bidirectional loop** between the personal knowledge base and the agent layer:
+
+- **KB → Agent (Pull):** Every agent (Claude Code, Raycast AI, Cursor, Craft Agents, Hermes) queries this KB via MCP before answering. The MCP server exposes `search_wiki`, `search_readwise`, `read_wiki_article`, and `ask_knowledge_base`. Answers are grounded in curated personal knowledge, not generic model memory.
+- **Agent → KB (Push):** Daily and weekly automations write insights back into the vault: Daily AI Signal Brief → `Journey/`, Readwise sync → `Raw/`, Tana notes → `Wiki/sources/`, conversation insights → `Journey/YYYY-MM-DD.md` via `memory-journal-sync`.
+- **Shared skill layer:** Skills (`wiki-query`, `wiki-ingest`, `memory-journal-sync`, `tana-wiki-export`, etc.) run identically across all agent surfaces. One skill, all agents.
+
+The KB compounds over time: every session enriches it, and richer KB means sharper agent answers.
+
+When working on this project, always keep this philosophy in mind. Features that strengthen either direction of the loop — better retrieval, better ingestion, better automation — are high priority.
+
+---
+
 ## Learned User Preferences
 - When executing attached implementation plans, leave the plan file unchanged, use the existing todos instead of recreating them, mark the current todo in progress, and continue until all todos are complete.
 - For UI work, self-test the actual page across the active theme and relevant responsive widths, then iterate on visible failures; screenshots from the user should trigger direct debugging and reassessment, not another abstract plan.
