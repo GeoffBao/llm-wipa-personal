@@ -20,12 +20,16 @@ const MODEL = process.env.CHAT_MODEL || 'deepseek-chat';
 
 // ── Shell page ────────────────────────────────────────────────────────────────
 router.get('/chat', async (req, res) => {
+  const embed = req.query.embed === '1';
+  const initialQuery = req.query.q ? String(req.query.q) : '';
   res.send(await render('chat.html', {
     pageTitle: 'Chat — LLM KB',
     activeNav: 'chat',
     vectorReady: isReady() ? 'true' : 'false',
     vectorCount: String(isReady() ? 2422 : 0),
     model: MODEL,
+    embed: embed ? 'true' : '',
+    initialQuery: initialQuery,
   }));
 });
 
@@ -37,24 +41,43 @@ router.post('/api/chat', async (req, res) => {
   }
 
   const lastUserMsg = [...messages].reverse().find(m => m.role === 'user');
-  const query = lastUserMsg?.content || '';
+  let query = lastUserMsg?.content || '';
+
+  // Parse @wiki:slug and @readwise:term mentions
+  const wikiMentionSlugs = [...query.matchAll(/@wiki:([^\s]+)/gi)].map(m => m[1]);
+  const readwiseTerms = [...query.matchAll(/@readwise:([^\s]+)/gi)].map(m => m[1]);
+  const cleanQuery = query.replace(/@(wiki|readwise):[^\s]+/gi, '').trim() || query;
 
   // ── 1. Semantic search over Raw Readwise layer ──
   let rawSources = [];
-  if (isReady() && query) {
-    const hits = await semanticSearch(query, 6);
+  if (isReady() && cleanQuery) {
+    const searchQ = readwiseTerms.length ? readwiseTerms.join(' ') : cleanQuery;
+    const hits = await semanticSearch(searchQ, 6);
     rawSources = hits.filter(h => h.score >= 0.78);
   }
 
-  // ── 2. Wiki keyword search (title match) ──
+  // ── 2. Wiki keyword search (title match) + @wiki mentions ──
   let wikiSources = [];
-  if (useWiki && query) {
-    const terms = query.toLowerCase().split(/\s+/).filter(t => t.length > 1);
+  if (useWiki) {
     const allFiles = getAllFiles();
-    wikiSources = allFiles
-      .filter(f => terms.some(t => f.title?.toLowerCase().includes(t)))
-      .slice(0, 4)
-      .map(f => ({ title: f.title, slug: f.slug, section: f.section, raw: f.raw?.slice(0, 600) }));
+    for (const slug of wikiMentionSlugs) {
+      const f = getFile(slug);
+      if (f && !wikiSources.find(w => w.slug === f.slug)) {
+        wikiSources.push({ title: f.title, slug: f.slug, section: f.section, raw: f.raw?.slice(0, 600) });
+      }
+    }
+    if (cleanQuery) {
+      const terms = cleanQuery.toLowerCase().split(/\s+/).filter(t => t.length > 1);
+      allFiles
+        .filter(f => terms.some(t => f.title?.toLowerCase().includes(t)))
+        .slice(0, 4)
+        .forEach(f => {
+          if (!wikiSources.find(w => w.slug === f.slug)) {
+            wikiSources.push({ title: f.title, slug: f.slug, section: f.section, raw: f.raw?.slice(0, 600) });
+          }
+        });
+    }
+    wikiSources = wikiSources.slice(0, 6);
   }
 
   // ── 3. Build context block ──

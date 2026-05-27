@@ -3,7 +3,7 @@ import {
   getAllExcalidrawFiles, getExcalidrawFile,
   saveExcalidrawFile, createExcalidrawFile,
 } from '../vault/excalidraw.js';
-import { render } from '../render/template.js';
+import { render, renderDirect } from '../render/template.js';
 
 const router = Router();
 
@@ -41,7 +41,7 @@ router.get('/excalidraw', async (req, res) => {
 
 // ── New drawing form ──────────────────────────────────────────────────────────
 router.get('/excalidraw/new', async (req, res) => {
-  res.send(await render('excalidraw-editor.html', {
+  res.send(await renderDirect('excalidraw-editor.html', {
     pageTitle: 'New Drawing — LLM KB',
     slug: '',
     title: '',
@@ -58,7 +58,7 @@ router.get('/excalidraw/:slug', async (req, res) => {
 
   const drawingData = JSON.stringify({ elements: drawing.elements, background: drawing.background });
 
-  res.send(await render('excalidraw.html', {
+  res.send(await renderDirect('excalidraw.html', {
     pageTitle: `${drawing.title} — LLM KB`,
     title: drawing.title,
     elementCount: drawing.elementCount,
@@ -73,7 +73,7 @@ router.get('/excalidraw/:slug/edit', async (req, res) => {
   const drawing = getExcalidrawFile(req.params.slug);
   if (!drawing) return res.status(404).send('Drawing not found');
 
-  res.send(await render('excalidraw-editor.html', {
+  res.send(await renderDirect('excalidraw-editor.html', {
     pageTitle: `Edit: ${drawing.title} — LLM KB`,
     slug: drawing.slug,
     title: drawing.title,

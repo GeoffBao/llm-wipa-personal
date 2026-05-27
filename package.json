@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "start": "node --env-file=.env server.js",
-    "dev": "node --env-file=.env --watch server.js"
+    "dev": "node --env-file=.env --watch server.js",
+    "desktop": "cd desktop && npm start",
+    "desktop:dist": "cd desktop && npm run dist"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.92.0",

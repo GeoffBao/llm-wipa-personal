@@ -26,6 +26,29 @@
 }
 .cmdp-backdrop[data-open="true"] .cmdp { transform: translateY(0); }
 
+.cmdp-mode-tabs {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.35rem 0.5rem 0;
+}
+
+.cmdp-mode-tab {
+  padding: 0.2rem 0.55rem;
+  font-size: 0.68rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: var(--font-sans);
+}
+
+.cmdp-mode-tab.active {
+  background: var(--blue-light, var(--accent-soft, #eff6ff));
+  color: var(--blue, var(--accent, #1a56db));
+  border-color: rgba(109, 130, 255, 0.2);
+}
+
 .cmdp-input-wrap {
   display: flex; align-items: center; gap: 10px;
   padding: 14px 16px;

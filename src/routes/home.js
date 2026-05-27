@@ -29,7 +29,7 @@ router.get('/', async (req, res) => {
   const orphanNudge = orphans.length ? renderOrphanNudge(orphans) : '';
 
   res.send(await render('home.html', {
-    pageTitle: "LLM KB — Eason's Knowledge Base",
+    pageTitle: "LLM KB — Explore your interests",
     featuredConcept: featuredHtml,
     recentUpdates: recentHtml,
     didYouKnow: dykHtml,
@@ -159,29 +159,34 @@ function renderMocGrid(mocs) {
 
 function renderPortals(allFiles) {
   return DOMAIN_PORTALS.map(portal => {
-    // Find files related to this portal by keywords/tags
     const related = allFiles.filter(f => {
       if (f.section !== 'concepts' && f.section !== 'sources') return false;
       const text = (f.title + ' ' + (f.meta.tags || []).join(' ')).toLowerCase();
       return portal.keywords.some(kw => {
-        if (kw.startsWith('moc:')) return false; // handled separately
+        if (kw.startsWith('moc:')) return false;
         return text.includes(kw.toLowerCase());
       });
-    }).slice(0, 6);
+    });
 
-    const links = related.map(f =>
-      `<li><a href="/wiki/${f.slug}">${f.title}</a></li>`
-    ).join('');
+    const count = related.length;
+    const href = related[0] ? `/wiki/${related[0].slug}` : `/browse/concepts`;
+    const cover = portal.coverColor || '#6D82FF';
 
     return `
-      <div class="portal-card">
-        <div class="portal-header">
-          <span class="portal-icon">${portal.icon}</span>
-          <h3 class="portal-title">${portal.title}</h3>
+      <div class="notebook-card" data-href="${href}" data-notebook-id="${portal.id}" role="link" tabindex="0">
+        <div class="notebook-cover" style="background: linear-gradient(145deg, ${cover} 0%, color-mix(in srgb, ${cover} 70%, #000) 100%)">
+          <canvas class="notebook-cover-sketch" data-notebook-id="${portal.id}" width="200" height="250" aria-hidden="true"></canvas>
+          <button type="button" class="notebook-scribble-btn" data-notebook-id="${portal.id}" title="Scribble on cover" aria-label="Scribble on cover">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="m18 13-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/></svg>
+          </button>
+          <div class="notebook-cover-inner">
+            <div class="notebook-icon">${portal.icon}</div>
+            <div class="notebook-title">${portal.title}</div>
+          </div>
         </div>
-        <p class="portal-desc">${portal.description}</p>
-        <ul class="portal-links">${links}</ul>
-        <a href="/browse/concepts" class="portal-more">More →</a>
+        <div class="notebook-meta">
+          <strong>${count}</strong> articles · ${portal.description.split(',')[0]}
+        </div>
       </div>`;
   }).join('');
 }

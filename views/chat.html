@@ -19,6 +19,25 @@ body:has(.chat-page) .site-footer {
   display: none;
 }
 
+body:has(.chat-page[data-embed="true"]) .site-header,
+body:has(.chat-page[data-embed="true"]) .sidebar,
+body:has(.chat-page[data-embed="true"]) .site-footer {
+  display: none !important;
+}
+body:has(.chat-page[data-embed="true"]) .page-body {
+  height: 100vh;
+}
+body:has(.chat-page[data-embed="true"]) .main-content {
+  max-width: none;
+}
+body:has(.chat-page[data-embed="true"]) .chat-page {
+  max-width: none;
+  padding: var(--space-3);
+}
+body:has(.chat-page[data-embed="true"]) .chat-sidebar {
+  display: none;
+}
+
 /* ── Chat page layout ── */
 .chat-page {
   display: flex;
@@ -404,22 +423,25 @@ body:has(.chat-page) .site-footer {
 .cite-ref {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  padding: 0 5px;
-  height: 18px;
-  border-radius: 3px;
-  font-size: 0.7rem;
-  font-weight: 700;
-  font-family: var(--font-mono);
+  gap: 0.2rem;
+  padding: 0.1rem 0.5rem;
+  height: auto;
+  min-height: 20px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  font-family: var(--font-sans);
   vertical-align: middle;
   text-decoration: none !important;
   cursor: pointer;
-  transition: opacity .15s;
+  transition: opacity .15s, transform .15s;
 }
-.cite-ref:hover { opacity: 0.75; }
-.cite-raw  { background: #fef3c7; color: #92400e; }
-.cite-wiki { background: var(--blue-light); color: var(--blue); }
+.cite-ref:hover { opacity: 0.85; transform: translateY(-1px); }
+.cite-raw, .cite-chip-raw  { background: rgba(40, 167, 69, 0.12); color: #15803d; border: 1px solid rgba(40, 167, 69, 0.25); }
+.cite-wiki, .cite-chip-wiki { background: var(--accent-soft, var(--blue-light)); color: var(--accent, var(--blue)); border: 1px solid rgba(109, 130, 255, 0.25); }
 a.cite-ref { text-decoration: none; }
+
+.chat-input-row { position: relative; }
 
 /* ── Mermaid error fallback ── */
 .mermaid-error {
@@ -481,7 +503,7 @@ a.cite-ref { text-decoration: none; }
 }
 </style>
 
-<div class="chat-page">
+<div class="chat-page" data-embed="{{embed}}" data-initial-q="{{initialQuery}}">
 
   <!-- Left: conversation -->
   <div class="chat-main">
@@ -524,7 +546,7 @@ a.cite-ref { text-decoration: none; }
         <textarea
           id="chat-input"
           class="chat-textarea"
-          placeholder="Ask anything about your knowledge base…"
+          placeholder="Ask anything… use @wiki:slug or @readwise:term"
           rows="1"
           autofocus
         ></textarea>
@@ -660,13 +682,15 @@ let currentWikiSources = [];
 function linkifyCitations(html) {
   html = html.replace(/\[R(\d+)\]/g, (_, n) => {
     const s = currentRawSources[+n - 1];
-    if (!s?.url) return `<span class="cite-ref cite-raw">[R${n}]</span>`;
-    return `<a href="${s.url}" target="_blank" rel="noopener" class="cite-ref cite-raw" title="${escHtml(s.title)}">[R${n}]</a>`;
+    const label = s ? (s.title?.slice(0, 24) || `R${n}`) : `R${n}`;
+    if (!s?.url) return `<span class="cite-ref cite-chip cite-chip-raw" title="${escHtml(s?.title || '')}">${escHtml(label)}</span>`;
+    return `<a href="${s.url}" target="_blank" rel="noopener" class="cite-ref cite-chip cite-chip-raw" title="${escHtml(s.title)}">${escHtml(label)}</a>`;
   });
   html = html.replace(/\[W(\d+)\]/g, (_, n) => {
     const w = currentWikiSources[+n - 1];
-    if (!w?.slug) return `<span class="cite-ref cite-wiki">[W${n}]</span>`;
-    return `<a href="/wiki/${w.slug}" class="cite-ref cite-wiki" title="${escHtml(w.title)}">[W${n}]</a>`;
+    const label = w ? (w.title?.slice(0, 24) || `W${n}`) : `W${n}`;
+    if (!w?.slug) return `<span class="cite-ref cite-chip cite-chip-wiki">${escHtml(label)}</span>`;
+    return `<a href="/wiki/${w.slug}" class="cite-ref cite-chip cite-chip-wiki" title="${escHtml(w.title)}">${escHtml(label)}</a>`;
   });
   return html;
 }
@@ -675,11 +699,94 @@ function linkifyCitations(html) {
 inputEl.addEventListener('input', () => {
   inputEl.style.height = 'auto';
   inputEl.style.height = Math.min(inputEl.scrollHeight, 160) + 'px';
+  handleMentionInput();
 });
+
+// ── @wiki / @readwise mention autocomplete ──
+let mentionDropdown = null;
+let mentionItems = [];
+let mentionActive = 0;
+
+function ensureMentionDropdown() {
+  if (mentionDropdown) return mentionDropdown;
+  mentionDropdown = document.createElement('div');
+  mentionDropdown.className = 'mention-dropdown';
+  mentionDropdown.hidden = true;
+  inputEl.closest('.chat-input-row')?.appendChild(mentionDropdown);
+  mentionDropdown.addEventListener('click', (e) => {
+    const item = e.target.closest('.mention-item');
+    if (item) insertMention(item.dataset.insert);
+  });
+  return mentionDropdown;
+}
+
+function getMentionContext() {
+  const val = inputEl.value;
+  const pos = inputEl.selectionStart;
+  const before = val.slice(0, pos);
+  const m = before.match(/@(wiki|readwise):([^\s]*)$/i);
+  if (!m) return null;
+  return { type: m[1].toLowerCase(), partial: m[2], start: before.length - m[0].length };
+}
+
+async function handleMentionInput() {
+  const ctx = getMentionContext();
+  const dd = ensureMentionDropdown();
+  if (!ctx) { dd.hidden = true; return; }
+
+  const q = ctx.partial || '';
+  const resp = await fetch('/api/search?q=' + encodeURIComponent(q)).catch(() => null);
+  const data = resp ? await resp.json().catch(() => []) : [];
+  mentionItems = (Array.isArray(data) ? data : []).slice(0, 6).map(r => ({
+    title: r.title,
+    insert: ctx.type === 'wiki' ? `@wiki:${r.slug} ` : `@readwise:${r.title.split(/\s/)[0]} `,
+    tag: r.section || ctx.type,
+  }));
+
+  if (!mentionItems.length) { dd.hidden = true; return; }
+  mentionActive = 0;
+  dd.innerHTML = mentionItems.map((it, i) =>
+    `<div class="mention-item${i === 0 ? ' active' : ''}" data-insert="${escHtml(it.insert)}" data-idx="${i}">
+      <span>${escHtml(it.title)}</span><span class="mention-item-tag">${escHtml(it.tag)}</span>
+    </div>`
+  ).join('');
+  dd.hidden = false;
+}
+
+function insertMention(text) {
+  const ctx = getMentionContext();
+  if (!ctx) return;
+  const val = inputEl.value;
+  const pos = inputEl.selectionStart;
+  const before = val.slice(0, ctx.start);
+  const after = val.slice(pos);
+  inputEl.value = before + text + after;
+  inputEl.focus();
+  ensureMentionDropdown().hidden = true;
+}
+
+inputEl.addEventListener('keydown', e => {
+  const dd = mentionDropdown;
+  if (dd && !dd.hidden && mentionItems.length) {
+    if (e.key === 'ArrowDown') { e.preventDefault(); mentionActive = (mentionActive + 1) % mentionItems.length; updateMentionActive(); return; }
+    if (e.key === 'ArrowUp') { e.preventDefault(); mentionActive = (mentionActive - 1 + mentionItems.length) % mentionItems.length; updateMentionActive(); return; }
+    if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); insertMention(mentionItems[mentionActive].insert); return; }
+    if (e.key === 'Escape') { dd.hidden = true; return; }
+  }
+});
+
+function updateMentionActive() {
+  mentionDropdown?.querySelectorAll('.mention-item').forEach((el, i) => {
+    el.classList.toggle('active', i === mentionActive);
+  });
+}
 
 // ── Send on Enter (Shift+Enter = newline) ──
 inputEl.addEventListener('keydown', e => {
-  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  if (e.key === 'Enter' && !e.shiftKey && !(mentionDropdown && !mentionDropdown.hidden)) {
+    e.preventDefault();
+    sendMessage();
+  }
 });
 sendBtn.addEventListener('click', sendMessage);
 
@@ -825,7 +932,8 @@ async function sendMessage() {
     // Run mermaid on any diagrams in the final bubble, fall back to code on error
     const diagrams = [...aiBubble.querySelectorAll('.mermaid')];
     if (diagrams.length && window.mermaid) {
-      const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+      const theme = document.documentElement.getAttribute('data-theme');
+      const dark = theme === 'dark' || theme === 'surf-dark';
       mermaid.initialize({ startOnLoad: false, theme: dark ? 'dark' : 'default', securityLevel: 'loose' });
       for (const node of diagrams) {
         try {
@@ -854,4 +962,14 @@ async function sendMessage() {
   sendBtn.disabled = false;
   inputEl.focus();
 }
+
+// Bootstrap from URL ?q= or split-pane embed
+(function () {
+  const page = document.querySelector('.chat-page');
+  const initial = page?.dataset?.initialQ || new URLSearchParams(window.location.search).get('q');
+  if (initial) {
+    inputEl.value = initial;
+    if (page?.dataset?.embed === 'true') sendMessage();
+  }
+})();
 </script>

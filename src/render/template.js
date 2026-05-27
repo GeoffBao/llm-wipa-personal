@@ -44,6 +44,12 @@ export async function render(viewName, vars = {}) {
   return interpolate(layout, { ...vars, content: viewHtml });
 }
 
+// Render a standalone HTML page (no layout wrapper)
+export async function renderDirect(viewName, vars = {}) {
+  const view = await loadTemplate(viewName);
+  return interpolate(view, vars);
+}
+
 // Clear template cache (used in dev --watch mode)
 export function clearCache() {
   cache.clear();

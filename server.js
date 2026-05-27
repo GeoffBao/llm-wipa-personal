@@ -26,6 +26,7 @@ import journeyRouter from './src/routes/journeyRoute.js';
 import semanticSearchRouter from './src/routes/semanticSearch.js';
 import { loadVectorStore } from './src/search/vectorStore.js';
 import chatRouter from './src/routes/chatRoute.js';
+import embedRouter from './src/routes/embedRoute.js';
 import { CACHE_DIR as FLIPBOOK_CACHE_DIR } from './src/services/flipbook.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -62,6 +63,7 @@ app.use(flipbookRouter);
 app.use(journeyRouter);
 app.use(semanticSearchRouter);
 app.use(chatRouter);
+app.use(embedRouter);
 
 // Debounced vault watcher
 let rebuildTimer = null;

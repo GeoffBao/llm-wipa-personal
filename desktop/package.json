@@ -1,0 +1,34 @@
+{
+  "name": "llm-kb-desktop",
+  "version": "1.0.0",
+  "description": "macOS desktop shell for LLM KB (llm-wipa)",
+  "main": "main.js",
+  "type": "module",
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder --mac dmg"
+  },
+  "build": {
+    "appId": "com.eason.llmkb",
+    "productName": "LLM KB",
+    "directories": {
+      "output": "dist"
+    },
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": ["dmg"],
+      "darkModeSupport": true
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "icon.png"
+    ],
+    "extraResources": []
+  },
+  "devDependencies": {
+    "electron": "^35.0.0",
+    "electron-builder": "^25.1.8"
+  }
+}

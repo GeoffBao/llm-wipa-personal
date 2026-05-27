@@ -39,14 +39,35 @@
   let active = 0;
   let lastQuery = '';
   let searchAbort = null;
+  let mode = 'search'; // search | ask | commands
+
+  const MODES = [
+    { id: 'search', label: 'Search' },
+    { id: 'ask', label: 'Ask' },
+    { id: 'commands', label: 'Commands' },
+  ];
+
+  function setMode(m) {
+    mode = m;
+    root?.querySelectorAll('.cmdp-mode-tab').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.mode === m);
+    });
+    if (input) {
+      input.placeholder = m === 'ask'
+        ? 'Ask anything about your knowledge base…'
+        : m === 'commands'
+          ? 'Run a command…'
+          : 'Search notes or navigate…';
+    }
+    handleInput();
+  }
 
   function open() {
     if (!root) return;
     backdrop.setAttribute('data-open', 'true');
     input.value = '';
     lastQuery = '';
-    render([]);
-    // Default view: show commands
+    setMode('search');
     setTimeout(() => input.focus(), 20);
   }
   function close() {
@@ -57,11 +78,17 @@
 
   function render(results) {
     const q = input.value.trim();
-    const matchingCmds = filterCommands(q);
+    const matchingCmds = mode === 'commands' || mode === 'search' ? filterCommands(q) : [];
     items = [];
     let html = '';
 
-    if (matchingCmds.length) {
+    if (mode === 'ask' && q) {
+      items.push({ type: 'ask', query: q });
+      html += `<div class="cmdp-group-label">Ask</div>`;
+      html += itemHtml({ title: `Ask: "${q}"`, icon: 'search', tag: 'chat' });
+    }
+
+    if (matchingCmds.length && mode !== 'ask') {
       html += `<div class="cmdp-group-label">Commands</div>`;
       matchingCmds.forEach(c => {
         items.push({ type: 'cmd', cmd: c });
@@ -69,7 +96,7 @@
       });
     }
 
-    if (results.length) {
+    if (results.length && mode !== 'commands') {
       html += `<div class="cmdp-group-label">Notes</div>`;
       results.forEach(r => {
         items.push({ type: 'note', slug: r.slug });
@@ -78,7 +105,7 @@
     }
 
     if (!items.length) {
-      html = `<div class="cmdp-empty">${q ? 'No matches.' : 'Type to search notes or pick a command.'}</div>`;
+      html = `<div class="cmdp-empty">${q ? 'No matches.' : mode === 'ask' ? 'Type a question to ask your KB.' : 'Type to search notes or pick a command.'}</div>`;
     }
 
     list.innerHTML = html;
@@ -116,6 +143,8 @@
   async function handleInput() {
     const q = input.value.trim();
     lastQuery = q;
+    if (mode === 'commands') { render([]); return; }
+    if (mode === 'ask') { render([]); return; }
     if (!q) { render([]); return; }
 
     if (searchAbort) searchAbort.abort();
@@ -133,23 +162,27 @@
   function activateCurrent() {
     const it = items[active];
     if (!it) return;
-    if (it.type === 'cmd') { close(); it.cmd.action(); }
+    if (it.type === 'ask') { close(); nav('/chat?q=' + encodeURIComponent(it.query)); }
+    else if (it.type === 'cmd') { close(); it.cmd.action(); }
     else if (it.type === 'note') { close(); nav('/wiki/' + it.slug); }
   }
 
   function build() {
     root = document.createElement('div');
     root.innerHTML = `
-      <div class="cmdp-backdrop" data-open="false" role="dialog" aria-modal="true" aria-label="Command palette">
+      <div class="cmdp-backdrop" data-open="false" role="dialog" aria-modal="true" aria-label="Omnibar">
         <div class="cmdp" role="combobox" aria-expanded="true">
+          <div class="cmdp-mode-tabs" role="tablist">
+            ${MODES.map(m => `<button type="button" class="cmdp-mode-tab${m.id === 'search' ? ' active' : ''}" data-mode="${m.id}" role="tab">${m.label}</button>`).join('')}
+          </div>
           <div class="cmdp-input-wrap">
             <span class="cmdp-input-icon">${ICONS.search}</span>
-            <input class="cmdp-input" type="text" placeholder="Search notes or run a command…" autocomplete="off" spellcheck="false" aria-label="Command palette input">
+            <input class="cmdp-input" type="text" placeholder="Search notes or navigate…" autocomplete="off" spellcheck="false" aria-label="Omnibar input">
             <span class="cmdp-hint">ESC</span>
           </div>
           <div class="cmdp-list" role="listbox"></div>
           <div class="cmdp-footer">
-            <span class="cmdp-footer-left"><kbd>↑</kbd><kbd>↓</kbd> navigate</span>
+            <span class="cmdp-footer-left"><kbd>↑</kbd><kbd>↓</kbd> navigate · <kbd>Tab</kbd> mode</span>
             <span class="cmdp-footer-right"><kbd>↵</kbd> open · <kbd>${isMac ? '⌘' : 'Ctrl'}</kbd><kbd>K</kbd> toggle</span>
           </div>
         </div>
@@ -162,9 +195,17 @@
     input.addEventListener('input', handleInput);
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') { e.preventDefault(); close(); }
+      else if (e.key === 'Tab') {
+        e.preventDefault();
+        const idx = MODES.findIndex(m => m.id === mode);
+        setMode(MODES[(idx + 1) % MODES.length].id);
+      }
       else if (e.key === 'ArrowDown') { e.preventDefault(); if (items.length) { active = (active + 1) % items.length; updateActive(); } }
       else if (e.key === 'ArrowUp')   { e.preventDefault(); if (items.length) { active = (active - 1 + items.length) % items.length; updateActive(); } }
       else if (e.key === 'Enter')     { e.preventDefault(); activateCurrent(); }
+    });
+    backdrop.querySelectorAll('.cmdp-mode-tab').forEach(btn => {
+      btn.addEventListener('click', () => setMode(btn.dataset.mode));
     });
     backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close(); });
     list.addEventListener('click', (e) => {

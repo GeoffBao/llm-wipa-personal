@@ -7,33 +7,38 @@
   <link rel="icon" type="image/svg+xml" href="/public/favicon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300..700;1,14..32,300..700&family=JetBrains+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..700;1,9..144,400..700&family=Inter:ital,opsz,wght@0,14..32,300..700;1,14..32,300..700&family=JetBrains+Mono:wght@400;500&display=swap">
   <link rel="stylesheet" href="/public/css/main.css">
   <link rel="stylesheet" href="/public/css/hljs.css">
   <link rel="stylesheet" href="/public/css/dark.css">
   <link rel="stylesheet" href="/public/css/wikipedia.css">
+  <link rel="stylesheet" href="/public/css/surf.css">
   <link rel="stylesheet" href="/public/css/palette.css">
   <link rel="stylesheet" href="/public/css/right-pane.css">
   <script>
     // Theme bootstrap — runs before paint to avoid flash
     (function () {
-      var THEMES = ['light', 'dark', 'wikipedia'];
+      var THEMES = ['surf', 'light', 'dark', 'wikipedia'];
       try {
-        var t = localStorage.getItem('wipa-theme');
-        if (t === 'dark' || t === 'wikipedia') document.documentElement.setAttribute('data-theme', t);
-      } catch (e) {}
+        var t = localStorage.getItem('wipa-theme') || 'surf';
+        if (t === 'light') document.documentElement.removeAttribute('data-theme');
+        else document.documentElement.setAttribute('data-theme', t);
+      } catch (e) {
+        document.documentElement.setAttribute('data-theme', 'surf');
+      }
       window.__setTheme = function (t) {
-        if (t === 'dark' || t === 'wikipedia') document.documentElement.setAttribute('data-theme', t);
-        else document.documentElement.removeAttribute('data-theme');
-        try { localStorage.setItem('wipa-theme', t || 'light'); } catch (e) {}
+        t = t || 'surf';
+        if (t === 'light') document.documentElement.removeAttribute('data-theme');
+        else document.documentElement.setAttribute('data-theme', t);
+        try { localStorage.setItem('wipa-theme', t); } catch (e) {}
         document.querySelectorAll('.theme-opt').forEach(function (b) {
-          b.classList.toggle('active', b.dataset.t === (t || 'light'));
+          b.classList.toggle('active', b.dataset.t === t);
         });
       };
-      // Kept for palette/legacy callers — cycles light→dark→wikipedia→light
       window.__toggleTheme = function () {
         var cur = document.documentElement.getAttribute('data-theme') || 'light';
-        var idx = THEMES.indexOf(cur);
+        var idx = THEMES.indexOf(cur === 'light' ? 'light' : cur);
+        if (idx < 0) idx = 0;
         window.__setTheme(THEMES[(idx + 1) % THEMES.length]);
       };
     })();
@@ -53,9 +58,9 @@
             type="search"
             name="q"
             id="search-input"
-            placeholder="Search concepts, notes, sources…"
+            placeholder="Ask anything or search…"
             value="{{query}}"
-            aria-label="Search knowledge base"
+            aria-label="Search or ask"
           >
           <button type="submit" class="search-btn" aria-label="Search">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -67,6 +72,9 @@
         </div>
       </form>
       <div class="theme-switcher" id="theme-switcher" role="group" aria-label="Color theme">
+        <button class="theme-opt" data-t="surf" title="Surf theme" aria-label="Surf theme">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2"/><circle cx="12" cy="12" r="4" fill="currentColor" opacity="0.2"/></svg>
+        </button>
         <button class="theme-opt" data-t="light" title="Light theme" aria-label="Light theme">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
         </button>
@@ -95,6 +103,14 @@
 
   <div class="page-body">
     <aside class="sidebar" id="sidebar">
+      <div class="workspace-tabs-wrap">
+        <div class="sidebar-heading">Tabs</div>
+        <div class="workspace-tabs" id="workspace-tabs" role="tablist" aria-label="Open tabs"></div>
+        <button type="button" class="workspace-new-tab" id="workspace-new-tab" aria-label="New tab">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+          New tab
+        </button>
+      </div>
       <nav class="sidebar-nav">
         <div class="sidebar-section">
           <div class="sidebar-heading">Wiki</div>
@@ -146,7 +162,7 @@
   <footer class="site-footer">
     <div class="footer-inner">
       <img src="/public/favicon.svg" width="16" height="16" alt="" style="opacity:.5">
-      <span><strong>LLM KB</strong> — Eason's Personal Knowledge Base</span>
+      <span><strong>LLM KB</strong> — Search less. Think better.</span>
       <span>·</span>
       <a href="/">Home</a>
       <span>·</span>
@@ -160,6 +176,9 @@
   <script src="/public/js/toc-highlight.js" defer></script>
   <script src="/public/js/mobile-nav.js" defer></script>
   <script src="/public/js/palette.js" defer></script>
+  <script src="/public/js/workspace.js" defer></script>
+  <script src="/public/js/split-pane.js" defer></script>
+  <script src="/public/js/notebook-cover.js" defer></script>
   <script src="/public/vendor/d3.min.js" defer></script>
   <script src="/public/js/right-pane.js" defer></script>
   <script src="/public/vendor/mermaid.min.js" defer></script>
@@ -169,9 +188,10 @@
       const r = await fetch('/api/random').then(r => r.json());
       if (r.slug) window.location.href = '/wiki/' + r.slug;
     });
-    // Wire up 3-way theme switcher
+    // Wire up theme switcher
     (function () {
-      var cur = document.documentElement.getAttribute('data-theme') || 'light';
+      var cur = document.documentElement.getAttribute('data-theme') || localStorage.getItem('wipa-theme') || 'surf';
+      if (cur === 'light') cur = 'light';
       document.querySelectorAll('.theme-opt').forEach(function (btn) {
         btn.classList.toggle('active', btn.dataset.t === cur);
         btn.addEventListener('click', function () { window.__setTheme?.(this.dataset.t); });
@@ -179,7 +199,8 @@
     })();
     window.addEventListener('load', async () => {
       if (!window.mermaid) return;
-      const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+      const theme = document.documentElement.getAttribute('data-theme');
+      const dark = theme === 'dark' || theme === 'surf-dark';
       mermaid.initialize({
         startOnLoad: false,
         theme: dark ? 'dark' : 'default',

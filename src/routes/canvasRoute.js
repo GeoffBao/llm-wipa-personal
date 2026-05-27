@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { getAllCanvases, getCanvas } from '../vault/canvas.js';
-import { render } from '../render/template.js';
+import { render, renderDirect } from '../render/template.js';
 import { renderMarkdown } from '../render/markdown.js';
 import { marked } from 'marked';
 
@@ -39,7 +39,7 @@ router.get('/diagrams/:slug', async (req, res) => {
     edges: canvas.edges,
   });
 
-  res.send(await render('canvas.html', {
+  res.send(await renderDirect('canvas.html', {
     pageTitle: `${canvas.title} — LLM KB`,
     title: canvas.title,
     nodeCount: canvas.nodes.length,
