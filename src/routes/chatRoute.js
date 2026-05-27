@@ -7,7 +7,8 @@
 import { Router } from 'express';
 import { render } from '../render/template.js';
 import { semanticSearch, isReady } from '../search/vectorStore.js';
-import { getAllFiles, getFile } from '../vault/loader.js';
+import { getFile } from '../vault/loader.js';
+import { search as wikiSearch } from '../search/index.js';
 import OpenAI from 'openai';
 
 const router = Router();
@@ -56,26 +57,25 @@ router.post('/api/chat', async (req, res) => {
     rawSources = hits.filter(h => h.score >= 0.78);
   }
 
-  // ── 2. Wiki keyword search (title match) + @wiki mentions ──
+  // ── 2. Wiki full-text search (MiniSearch) + @wiki mentions ──
   let wikiSources = [];
   if (useWiki) {
-    const allFiles = getAllFiles();
+    // Explicit @wiki:slug mentions get added first
     for (const slug of wikiMentionSlugs) {
       const f = getFile(slug);
       if (f && !wikiSources.find(w => w.slug === f.slug)) {
-        wikiSources.push({ title: f.title, slug: f.slug, section: f.section, raw: f.raw?.slice(0, 600) });
+        wikiSources.push({ title: f.title, slug: f.slug, section: f.section, body: f.body?.slice(0, 1800) });
       }
     }
+    // MiniSearch full-text search: title + tags + body, CJK-aware, fuzzy
     if (cleanQuery) {
-      const terms = cleanQuery.toLowerCase().split(/\s+/).filter(t => t.length > 1);
-      allFiles
-        .filter(f => terms.some(t => f.title?.toLowerCase().includes(t)))
-        .slice(0, 4)
-        .forEach(f => {
-          if (!wikiSources.find(w => w.slug === f.slug)) {
-            wikiSources.push({ title: f.title, slug: f.slug, section: f.section, raw: f.raw?.slice(0, 600) });
-          }
-        });
+      const hits = wikiSearch(cleanQuery, 8);
+      for (const hit of hits) {
+        if (wikiSources.find(w => w.slug === hit.slug)) continue;
+        const f = getFile(hit.slug);
+        if (!f) continue;
+        wikiSources.push({ title: f.title, slug: f.slug, section: f.section, body: f.body?.slice(0, 1800) });
+      }
     }
     wikiSources = wikiSources.slice(0, 6);
   }
@@ -92,9 +92,9 @@ router.post('/api/chat', async (req, res) => {
   }
 
   if (wikiSources.length > 0) {
-    contextParts.push('## 相关 Wiki 节点\n' +
+    contextParts.push('## 相关 Wiki 知识\n' +
       wikiSources.map((w, i) =>
-        `[W${i + 1}] [[${w.title}]] (${w.section})\n${w.raw || ''}`
+        `[W${i + 1}] [[${w.title}]] (${w.section})\n${w.body || ''}`
       ).join('\n\n')
     );
   }
