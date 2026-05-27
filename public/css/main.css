@@ -629,10 +629,10 @@ ul, ol { padding-left: 1.5em; }
   padding: 1.85rem 2rem;
   margin-bottom: 1.5rem;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 300px;
+  grid-template-columns: minmax(0, 1fr) 200px 280px;
   grid-template-areas:
-    "intro art"
-    "domains art";
+    "intro loop art"
+    "domains domains art";
   gap: 1rem 1.25rem;
   align-items: stretch;
   box-shadow: 0 18px 45px rgba(87,44,13,0.22), 0 2px 8px rgba(36,19,7,0.08);
@@ -679,7 +679,197 @@ ul, ol { padding-left: 1.5em; }
   z-index: 2;
   grid-area: intro;
   align-self: end;
-  max-width: 520px;
+}
+
+/* ── KB × Agent loop widget (hero middle column) ── */
+.loop-widget {
+  grid-area: loop;
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  cursor: pointer;
+  border-radius: calc(var(--radius-sm) + 2px);
+  border: 1px solid rgba(255,248,236,0.13);
+  background: rgba(255,248,236,0.05);
+  backdrop-filter: blur(6px);
+  padding: 1.1rem 0.75rem;
+  transition: background 0.2s, border-color 0.2s, transform 0.15s;
+  user-select: none;
+}
+.loop-widget:hover {
+  background: rgba(255,248,236,0.1);
+  border-color: rgba(255,248,236,0.28);
+  transform: translateY(-1px);
+}
+.loop-widget:active { transform: translateY(0); }
+.loop-widget-arrows {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  line-height: 1;
+}
+.loop-widget-arrow {
+  font-size: 0.72rem;
+  color: rgba(255,236,209,0.55);
+  letter-spacing: 0.04em;
+}
+.loop-widget-core {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: rgba(255,248,236,0.92);
+  letter-spacing: -0.01em;
+}
+.loop-widget-dot {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: rgba(244,184,93,0.18);
+  border: 1.5px solid rgba(244,184,93,0.4);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.75rem;
+  color: #f4b85d;
+  flex-shrink: 0;
+}
+.loop-widget-line {
+  width: 16px; height: 1px;
+  background: rgba(255,236,209,0.3);
+  position: relative;
+}
+.loop-widget-line::after {
+  content: "⟷";
+  position: absolute;
+  top: -8px; left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.65rem;
+  color: rgba(255,236,209,0.4);
+}
+.loop-widget-cta {
+  font-size: 0.67rem;
+  color: rgba(255,236,209,0.45);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-top: 0.2rem;
+}
+.loop-widget:hover .loop-widget-cta { color: rgba(255,236,209,0.72); }
+.loop-widget-pulse {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #f4b85d;
+  animation: loop-pulse 2s ease-in-out infinite;
+}
+@keyframes loop-pulse {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.3); }
+}
+
+/* ── Loop modal ── */
+.loop-modal-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(15,8,4,0.72);
+  backdrop-filter: blur(4px);
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+.loop-modal-backdrop.open { display: flex; }
+.loop-modal {
+  background: #1c100a;
+  border: 1px solid rgba(255,248,236,0.18);
+  border-radius: calc(var(--radius) + 4px);
+  max-width: 560px;
+  width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: 0 32px 64px rgba(0,0,0,0.6);
+  padding: 1.75rem 2rem;
+  color: rgba(255,248,236,0.88);
+}
+.loop-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+  gap: 1rem;
+}
+.loop-modal-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.3;
+}
+.loop-modal-subtitle {
+  font-size: 0.78rem;
+  color: rgba(255,236,209,0.5);
+  margin-top: 0.2rem;
+}
+.loop-modal-close {
+  background: rgba(255,248,236,0.08);
+  border: 1px solid rgba(255,248,236,0.12);
+  border-radius: 50%;
+  width: 28px; height: 28px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  color: rgba(255,248,236,0.5);
+  font-size: 0.85rem;
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s;
+}
+.loop-modal-close:hover { background: rgba(255,248,236,0.15); color: #fff; }
+.loop-modal-desc {
+  font-size: 0.83rem;
+  color: rgba(255,236,209,0.65);
+  line-height: 1.6;
+  margin-bottom: 1.25rem;
+}
+.loop-modal-section {
+  margin-bottom: 1.1rem;
+}
+.loop-modal-section-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #f4b85d;
+  margin-bottom: 0.55rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.loop-modal-section-title::before {
+  content: "";
+  display: inline-block;
+  width: 14px; height: 1px;
+  background: #f4b85d;
+  opacity: 0.5;
+}
+.loop-modal-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.loop-modal-tag {
+  font-size: 0.73rem;
+  background: rgba(255,248,236,0.06);
+  border: 1px solid rgba(255,248,236,0.12);
+  border-radius: 99px;
+  padding: 0.22rem 0.65rem;
+  color: rgba(255,236,209,0.7);
+  font-family: var(--font-mono);
+}
+.loop-modal-divider {
+  border: none;
+  border-top: 1px solid rgba(255,248,236,0.08);
+  margin: 1.1rem 0;
 }
 .index-hero-eyebrow {
   font-size: 0.68rem;
@@ -1650,6 +1840,7 @@ html[data-theme="dark"] .hl-quote { border-left-color: var(--blue); color: var(-
       "intro art"
       "domains domains";
   }
+  .loop-widget { display: none; }
   .index-hero::before {
     background:
       linear-gradient(90deg, rgba(20,12,8,0.92) 0%, rgba(42,24,13,0.7) 52%, rgba(42,24,13,0.2) 100%),
@@ -1691,6 +1882,7 @@ html[data-theme="dark"] .hl-quote { border-left-color: var(--blue); color: var(-
       "domains";
     padding: 1.25rem;
   }
+  .loop-widget { display: none; }
   .index-hero-art {
     min-height: 210px;
   }
@@ -1716,6 +1908,7 @@ html[data-theme="dark"] .hl-quote { border-left-color: var(--blue); color: var(-
       "intro art"
       "domains domains";
   }
+  .loop-widget { display: none; }
   .index-hero-art { min-height: 150px; }
   .index-domains { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }

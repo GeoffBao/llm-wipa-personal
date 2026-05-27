@@ -1,64 +1,4 @@
 <style>
-/* ── KB × Agent philosophy banner ── */
-.kb-loop-banner {
-  display: flex;
-  gap: 1.5rem;
-  background: linear-gradient(135deg, var(--bg-card) 0%, var(--blue-light, #eef4ff) 100%);
-  border: 1px solid var(--border);
-  border-left: 3px solid var(--blue);
-  border-radius: var(--radius);
-  padding: 1.1rem 1.25rem;
-  margin-bottom: 1.5rem;
-  align-items: flex-start;
-}
-.kb-loop-icon {
-  font-size: 1.5rem;
-  flex-shrink: 0;
-  margin-top: 2px;
-  opacity: .85;
-}
-.kb-loop-body { flex: 1; min-width: 0; }
-.kb-loop-title {
-  font-weight: 700;
-  font-size: .92rem;
-  color: var(--blue);
-  margin-bottom: .25rem;
-}
-.kb-loop-desc {
-  font-size: .82rem;
-  color: var(--text);
-  line-height: 1.55;
-  margin-bottom: .65rem;
-}
-.kb-loop-pills {
-  display: flex;
-  flex-wrap: wrap;
-  gap: .4rem;
-}
-.kb-loop-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: .3rem;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 99px;
-  padding: .2rem .65rem;
-  font-size: .74rem;
-  color: var(--text-muted);
-  font-weight: 500;
-  white-space: nowrap;
-}
-.kb-loop-pill .pill-dot {
-  width: 6px; height: 6px;
-  border-radius: 50%;
-  background: var(--blue);
-  flex-shrink: 0;
-}
-.kb-loop-pill.pill-push .pill-dot { background: var(--green, #22c55e); }
-@media (max-width: 640px) {
-  .kb-loop-banner { flex-direction: column; gap: .75rem; }
-}
-
 .mcp-setup-banner {
   display: flex;
   align-items: flex-start;
@@ -171,23 +111,6 @@
 })();
 </script>
 
-<div class="kb-loop-banner">
-  <div class="kb-loop-icon">🔄</div>
-  <div class="kb-loop-body">
-    <div class="kb-loop-title">KB × Agent — Bidirectional Loop</div>
-    <div class="kb-loop-desc">
-      This knowledge base is the shared brain across all AI agents — Claude Code, Raycast AI, Cursor, Craft, Hermes.
-      Agents query this KB before answering (via MCP), and daily automations write insights back.
-      Every session enriches the KB; a richer KB sharpens every future answer.
-    </div>
-    <div class="kb-loop-pills">
-      <span class="kb-loop-pill"><span class="pill-dot"></span>KB → Agent: MCP search_wiki · search_readwise · ask_kb</span>
-      <span class="kb-loop-pill pill-push"><span class="pill-dot"></span>Agent → KB: Daily Brief · Readwise sync · Tana export · Memory journal</span>
-      <span class="kb-loop-pill"><span class="pill-dot"></span>Shared skills: wiki-query · wiki-ingest · memory-journal-sync</span>
-    </div>
-  </div>
-</div>
-
 <div class="home-page">
 
   <!-- Wiki Index Hero -->
@@ -212,10 +135,100 @@
         </a>
       </div>
     </div>
+    <!-- KB × Agent loop widget — middle hero column -->
+    <div class="loop-widget" id="loop-widget-btn" role="button" tabindex="0" aria-label="KB × Agent — Bidirectional Loop, click to learn more">
+      <div class="loop-widget-arrows">
+        <div class="loop-widget-arrow">KB → Agent</div>
+      </div>
+      <div class="loop-widget-core">
+        <div class="loop-widget-dot">KB</div>
+        <div class="loop-widget-line"></div>
+        <div class="loop-widget-dot">AI</div>
+      </div>
+      <div class="loop-widget-arrows">
+        <div class="loop-widget-arrow">Agent → KB</div>
+      </div>
+      <div class="loop-widget-pulse"></div>
+      <div class="loop-widget-cta">How it works ↗</div>
+    </div>
+
     <div class="index-domains">
       {{{indexNav}}}
     </div>
   </div>
+
+  <!-- KB × Agent philosophy modal -->
+  <div class="loop-modal-backdrop" id="loop-modal" role="dialog" aria-modal="true" aria-label="KB × Agent Bidirectional Loop">
+    <div class="loop-modal">
+      <div class="loop-modal-header">
+        <div>
+          <div class="loop-modal-title">KB × Agent — Bidirectional Loop</div>
+          <div class="loop-modal-subtitle">The shared brain across all AI agents</div>
+        </div>
+        <button class="loop-modal-close" id="loop-modal-close" aria-label="Close">✕</button>
+      </div>
+      <p class="loop-modal-desc">
+        This knowledge base and every AI agent you work with form a continuous loop —
+        agents query the KB before answering, and daily automations write insights back.
+        Every session enriches the KB; a richer KB sharpens every future answer.
+      </p>
+      <hr class="loop-modal-divider">
+      <div class="loop-modal-section">
+        <div class="loop-modal-section-title">KB → Agent &nbsp;(Pull)</div>
+        <div class="loop-modal-tags">
+          <span class="loop-modal-tag">search_wiki</span>
+          <span class="loop-modal-tag">search_readwise</span>
+          <span class="loop-modal-tag">read_wiki_article</span>
+          <span class="loop-modal-tag">ask_knowledge_base</span>
+        </div>
+        <p style="font-size:.77rem;color:rgba(255,236,209,.45);margin-top:.6rem;line-height:1.5">
+          Claude Code · Raycast AI · Cursor · Craft Agents · Hermes — all query via MCP before answering.
+        </p>
+      </div>
+      <div class="loop-modal-section">
+        <div class="loop-modal-section-title">Agent → KB &nbsp;(Push)</div>
+        <div class="loop-modal-tags">
+          <span class="loop-modal-tag">Daily AI Brief</span>
+          <span class="loop-modal-tag">Memory journal sync</span>
+          <span class="loop-modal-tag">Readwise daily sync</span>
+          <span class="loop-modal-tag">Tana → Wiki export</span>
+          <span class="loop-modal-tag">wiki-ingest</span>
+          <span class="loop-modal-tag">Work indexer</span>
+        </div>
+      </div>
+      <div class="loop-modal-section">
+        <div class="loop-modal-section-title">Shared Skill Layer</div>
+        <div class="loop-modal-tags">
+          <span class="loop-modal-tag">wiki-query</span>
+          <span class="loop-modal-tag">wiki-ingest</span>
+          <span class="loop-modal-tag">memory-journal-sync</span>
+          <span class="loop-modal-tag">tana-wiki-export</span>
+          <span class="loop-modal-tag">readwise-auto-sync</span>
+        </div>
+        <p style="font-size:.77rem;color:rgba(255,236,209,.45);margin-top:.6rem;line-height:1.5">
+          One skill, all agent surfaces. Write once, every agent benefits.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  (function () {
+    var btn = document.getElementById('loop-widget-btn');
+    var modal = document.getElementById('loop-modal');
+    var closeBtn = document.getElementById('loop-modal-close');
+    if (!btn || !modal) return;
+
+    function openModal() { modal.classList.add('open'); }
+    function closeModal() { modal.classList.remove('open'); }
+
+    btn.addEventListener('click', openModal);
+    btn.addEventListener('keydown', function(e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openModal(); } });
+    closeBtn.addEventListener('click', closeModal);
+    modal.addEventListener('click', function(e) { if (e.target === modal) closeModal(); });
+    document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeModal(); });
+  })();
+  </script>
 
   <!-- Main Two-Column Layout -->
   <div class="home-main-grid">
