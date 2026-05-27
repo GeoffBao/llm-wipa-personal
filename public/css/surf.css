@@ -262,6 +262,88 @@ html[data-theme="surf"] .index-hero-btn--ghost {
   border: 1px solid rgba(109, 130, 255, 0.2);
 }
 
+/* Loop widget — readable on Surf's light hero */
+html[data-theme="surf"] .loop-widget {
+  background: rgba(255, 255, 255, 0.88);
+  border-color: rgba(109, 130, 255, 0.22);
+  box-shadow: var(--shadow-sm);
+}
+html[data-theme="surf"] .loop-widget:hover {
+  background: #fff;
+  border-color: rgba(109, 130, 255, 0.38);
+}
+html[data-theme="surf"] .loop-widget-arrow {
+  color: var(--text-muted);
+}
+html[data-theme="surf"] .loop-widget-core {
+  color: var(--heading-color);
+}
+html[data-theme="surf"] .loop-widget-dot {
+  background: rgba(109, 130, 255, 0.12);
+  border-color: rgba(109, 130, 255, 0.35);
+  color: var(--accent);
+}
+html[data-theme="surf"] .loop-widget-line {
+  background: rgba(109, 130, 255, 0.25);
+}
+html[data-theme="surf"] .loop-widget-line::after {
+  color: var(--accent);
+}
+html[data-theme="surf"] .loop-widget-cta {
+  color: var(--accent);
+}
+html[data-theme="surf"] .loop-widget:hover .loop-widget-cta {
+  color: #5a6fe6;
+}
+html[data-theme="surf"] .loop-widget-pulse {
+  background: var(--accent);
+}
+
+html[data-theme="surf"] .loop-modal-backdrop {
+  background: rgba(30, 35, 55, 0.45);
+}
+html[data-theme="surf"] .loop-modal {
+  background: #fff;
+  border-color: rgba(109, 130, 255, 0.22);
+  color: var(--text);
+  box-shadow: 0 24px 48px rgba(62, 71, 80, 0.18);
+}
+html[data-theme="surf"] .loop-modal-title {
+  color: var(--heading-color);
+}
+html[data-theme="surf"] .loop-modal-subtitle {
+  color: var(--text-muted);
+}
+html[data-theme="surf"] .loop-modal-desc {
+  color: var(--text);
+}
+html[data-theme="surf"] .loop-modal-note {
+  color: var(--text-muted);
+}
+html[data-theme="surf"] .loop-modal-section-title {
+  color: var(--accent);
+}
+html[data-theme="surf"] .loop-modal-section-title::before {
+  background: var(--accent);
+}
+html[data-theme="surf"] .loop-modal-tag {
+  background: rgba(109, 130, 255, 0.08);
+  border-color: rgba(109, 130, 255, 0.18);
+  color: var(--heading-color);
+}
+html[data-theme="surf"] .loop-modal-close {
+  background: rgba(109, 130, 255, 0.08);
+  border-color: rgba(109, 130, 255, 0.15);
+  color: var(--text-muted);
+}
+html[data-theme="surf"] .loop-modal-close:hover {
+  background: rgba(109, 130, 255, 0.15);
+  color: var(--heading-color);
+}
+html[data-theme="surf"] .loop-modal-divider {
+  border-top-color: rgba(109, 130, 255, 0.12);
+}
+
 html[data-theme="surf"] .home-section {
   background: var(--bg-card);
   border: 1px solid var(--border-light);

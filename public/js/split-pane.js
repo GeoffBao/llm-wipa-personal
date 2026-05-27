@@ -34,6 +34,7 @@
 
     applyRatio(ratio);
     bindSplitEvents();
+    window.dispatchEvent(new Event('wipa:split-built'));
 
     if (localStorage.getItem(STORAGE_KEY) === 'open') {
       openSplit('graph');
