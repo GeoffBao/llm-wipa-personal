@@ -100,13 +100,17 @@ Your KB grows with every session. Agents don't start cold — they start from yo
 
 ### Semantic Search
 - Local embeddings via `@xenova/transformers` (`multilingual-e5-small`, 118 MB, multilingual, fully offline)
-- Covers all 2422+ Readwise articles — articles, books, emails, videos, tweets
+- **Readwise layer**: covers 2422+ articles — articles, books, emails, videos, tweets
+- **Wiki layer**: covers all Wiki/Notes/Projects `.md` files, chunked at ~800 chars with overlap — 12,832 chunks total
 - `GET /api/semantic-search?q=<query>&k=<n>` — returns top-K results with cosine similarity scores
+- Both indices share a single model instance; dual hot-reload via chokidar
 - Daily auto-sync and re-embed at 07:00 via launchd cron
-- Hot-reload: vector index automatically reloads when the index file is updated on disk
 
 ### Chat with Knowledge Base
-- `/chat` — RAG chat interface: semantic search over Readwise + keyword search over Wiki → DeepSeek LLM
+- `/chat` — RAG chat interface with a three-source retrieval pipeline:
+  1. **R layer**: semantic search over Readwise (top 6, score ≥ 0.78)
+  2. **W-vec layer**: semantic search over Wiki/Notes/Projects (top 8, score ≥ 0.65, semantic-first)
+  3. **W-kw layer**: MiniSearch keyword search fills remaining W slots
 - Streaming via SSE — tokens appear as they're generated
 - Citation links — `[R1]` / `[W1]` rendered as clickable badges linking to source URL or wiki article
 - Sources panel — lists all retrieved sources with author, category, match score, and summary
@@ -165,6 +169,7 @@ llm-wipa/
 ├── scripts/
 │   ├── sync-readwise.js             # Fetch Readwise → Raw/readwise-sync-data.json
 │   ├── embed-readwise.js            # Embed articles → Raw/readwise-vector-index.json
+│   ├── embed-wiki.js                # Embed Wiki/Notes/Projects → Raw/wiki-vector-index.json
 │   └── sync-and-embed.sh            # Daily cron: sync + embed (incremental)
 │
 ├── src/
@@ -294,17 +299,31 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Semantic Search Setup
 
-Build the vector index over your Readwise library (required for `/chat` and `/api/semantic-search`):
+### Readwise index
 
 ```bash
-# First run — full embed (~2 min for 2422 articles, model downloads ~118 MB)
+# First run — full embed (~2 min for 2422 articles, model downloads ~118 MB on first run)
 node --env-file=.env scripts/embed-readwise.js
 
 # Incremental — only embeds new/updated articles
 node --env-file=.env scripts/embed-readwise.js --incremental
 ```
 
-The index is saved to `Raw/readwise-vector-index.json` in your vault. The server hot-reloads it automatically when updated.
+Writes to `Raw/readwise-vector-index.json`. Powers the R layer in Chat.
+
+### Wiki index
+
+```bash
+# First run — embeds all Wiki/Notes/Projects .md files (~5-10 min, 1400+ files → 12k chunks)
+node --env-file=.env scripts/embed-wiki.js
+
+# Incremental — only re-embeds files modified since last run (mtime-based)
+node --env-file=.env scripts/embed-wiki.js --incremental
+```
+
+Writes to `Raw/wiki-vector-index.json` (~100 MB). Powers the W-vec layer in Chat. Run once after initial setup; re-run incrementally when you add many new notes.
+
+Both indices hot-reload automatically when updated on disk.
 
 ---
 
@@ -463,7 +482,8 @@ YourVault/
 ├── Journey/             # Daily memory entries (YYYY-MM-DD.md)
 └── Raw/
     ├── readwise-sync-data.json      # Readwise library (from sync script)
-    └── readwise-vector-index.json   # Embeddings (from embed script)
+    ├── readwise-vector-index.json   # Readwise embeddings (from embed-readwise.js)
+    └── wiki-vector-index.json       # Wiki/Notes/Projects embeddings (from embed-wiki.js)
 ```
 
 ### Metadata format

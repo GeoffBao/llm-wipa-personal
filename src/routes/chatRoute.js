@@ -6,7 +6,7 @@
 
 import { Router } from 'express';
 import { render } from '../render/template.js';
-import { semanticSearch, isReady } from '../search/vectorStore.js';
+import { semanticSearch, isReady, wikiSemanticSearch, isWikiReady, getCount } from '../search/vectorStore.js';
 import { getFile } from '../vault/loader.js';
 import { search as wikiSearch } from '../search/index.js';
 import OpenAI from 'openai';
@@ -28,7 +28,7 @@ router.get('/chat', async (req, res) => {
     pageTitle: 'Chat — LLM KB',
     activeNav: 'chat',
     vectorReady: isReady() ? 'true' : 'false',
-    vectorCount: String(isReady() ? 2422 : 0),
+    vectorCount: String(isReady() ? getCount() : 0),
     model: DEFAULT_MODEL,
     embed: embed ? 'true' : '',
     initialQuery: initialQuery,
@@ -69,7 +69,18 @@ router.post('/api/chat', async (req, res) => {
         wikiSources.push({ title: f.title, slug: f.slug, section: f.section, body: f.body?.slice(0, 1800) });
       }
     }
-    // MiniSearch full-text search: title + tags + body, CJK-aware, fuzzy
+    // Wiki semantic search (vector) runs first: better relevance for paraphrase/pronoun queries
+    if (isWikiReady() && cleanQuery) {
+      const semHits = await wikiSemanticSearch(cleanQuery, 6);
+      for (const hit of semHits) {
+        if (hit.score < 0.65) continue;
+        if (wikiSources.find(w => w.slug === hit.slug)) continue;
+        const f = getFile(hit.slug);
+        if (!f) continue;
+        wikiSources.push({ title: f.title, slug: f.slug, section: f.section, body: f.body?.slice(0, 1800) });
+      }
+    }
+    // MiniSearch fills remaining slots: exact keyword matches that semantic may miss
     if (cleanQuery) {
       const hits = wikiSearch(cleanQuery, 8);
       for (const hit of hits) {
@@ -79,7 +90,8 @@ router.post('/api/chat', async (req, res) => {
         wikiSources.push({ title: f.title, slug: f.slug, section: f.section, body: f.body?.slice(0, 1800) });
       }
     }
-    wikiSources = wikiSources.slice(0, 6);
+
+    wikiSources = wikiSources.slice(0, 8);
   }
 
   // ── 3. Build context block ──

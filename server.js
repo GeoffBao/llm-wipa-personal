@@ -24,7 +24,7 @@ import readwiseRouter from './src/routes/readwiseRoute.js';
 import flipbookRouter from './src/routes/flipbookRoute.js';
 import journeyRouter from './src/routes/journeyRoute.js';
 import semanticSearchRouter from './src/routes/semanticSearch.js';
-import { loadVectorStore } from './src/search/vectorStore.js';
+import { loadVectorStore, loadWikiVectorStore } from './src/search/vectorStore.js';
 import chatRouter from './src/routes/chatRoute.js';
 import embedRouter from './src/routes/embedRoute.js';
 import { CACHE_DIR as FLIPBOOK_CACHE_DIR } from './src/services/flipbook.js';
@@ -90,12 +90,16 @@ async function start() {
   buildAssetIndex();
   await loadCanvases();
   await loadExcalidrawFiles();
-  loadVectorStore(); // non-blocking: semantic search available once index loads
+  loadVectorStore();     // non-blocking: Readwise semantic search available once index loads
+  loadWikiVectorStore(); // non-blocking: Wiki semantic search available once index loads
 
-  // Hot-reload vector index when daily cron updates it
-  const indexFile = join(VAULT_PATH, 'Raw', 'readwise-vector-index.json');
+  // Hot-reload vector indices when rebuilt by embed scripts
+  const indexFile     = join(VAULT_PATH, 'Raw', 'readwise-vector-index.json');
+  const wikiIndexFile = join(VAULT_PATH, 'Raw', 'wiki-vector-index.json');
   chokidar.watch(indexFile, { ignoreInitial: true })
-    .on('change', () => { loadVectorStore(); console.log('[watcher] Vector index reloaded'); });
+    .on('change', () => { loadVectorStore(); console.log('[watcher] Readwise vector index reloaded'); });
+  chokidar.watch(wikiIndexFile, { ignoreInitial: true })
+    .on('change', () => { loadWikiVectorStore(); console.log('[watcher] Wiki vector index reloaded'); });
   console.log(`[boot] Ready: ${files.length} files indexed`);
 
   // Watch views/ templates — clear cache on change

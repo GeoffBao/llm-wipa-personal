@@ -13,7 +13,7 @@ export async function askKB(question, useWiki = true) {
       body: JSON.stringify({
         messages: [{ role: 'user', content: question }],
         useWiki,
-        model: 'deepseek-chat',
+        model: 'deepseek-v4-flash',
       }),
       signal: AbortSignal.timeout(60_000),
     });
