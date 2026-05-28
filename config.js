@@ -10,7 +10,7 @@ export const READWISE_CHAT_URL = process.env.READWISE_CHAT_URL || 'https://readw
 /** OpenAI-compatible chat API (e.g. DeepSeek). Set in .env. */
 export const CHAT_BASE_URL = process.env.CHAT_BASE_URL || '';
 export const CHAT_API_KEY  = process.env.CHAT_API_KEY  || '';
-export const CHAT_MODEL    = process.env.CHAT_MODEL    || 'deepseek-chat';
+export const CHAT_MODEL    = process.env.CHAT_MODEL    || 'deepseek-v4-flash';
 
 // Subdirectories under VAULT_PATH/Wiki/ to index
 export const WIKI_SECTIONS = ['concepts', 'sources', 'mocs', 'synthesis', 'prompts', 'people'];

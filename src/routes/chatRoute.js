@@ -10,14 +10,15 @@ import { semanticSearch, isReady } from '../search/vectorStore.js';
 import { getFile } from '../vault/loader.js';
 import { search as wikiSearch } from '../search/index.js';
 import OpenAI from 'openai';
+import { CHAT_API_KEY, CHAT_BASE_URL, CHAT_MODEL } from '../../config.js';
 
 const router = Router();
 
 const client = new OpenAI({
-  apiKey: process.env.CHAT_API_KEY || '',
-  baseURL: process.env.CHAT_BASE_URL || 'https://api.deepseek.com/v1',
+  apiKey: CHAT_API_KEY || process.env.CHAT_API_KEY || '',
+  baseURL: CHAT_BASE_URL || process.env.CHAT_BASE_URL || 'https://api.deepseek.com/v1',
 });
-const MODEL = process.env.CHAT_MODEL || 'deepseek-chat';
+const DEFAULT_MODEL = CHAT_MODEL || 'deepseek-v4-flash';
 
 // ── Shell page ────────────────────────────────────────────────────────────────
 router.get('/chat', async (req, res) => {
@@ -28,7 +29,7 @@ router.get('/chat', async (req, res) => {
     activeNav: 'chat',
     vectorReady: isReady() ? 'true' : 'false',
     vectorCount: String(isReady() ? 2422 : 0),
-    model: MODEL,
+    model: DEFAULT_MODEL,
     embed: embed ? 'true' : '',
     initialQuery: initialQuery,
   }));
@@ -36,7 +37,8 @@ router.get('/chat', async (req, res) => {
 
 // ── Streaming chat API ────────────────────────────────────────────────────────
 router.post('/api/chat', async (req, res) => {
-  const { messages, useWiki = true } = req.body || {};
+  const { messages, useWiki = true, model } = req.body || {};
+  const chatModel = model || DEFAULT_MODEL;
   if (!Array.isArray(messages) || messages.length === 0) {
     return res.status(400).json({ error: 'messages required' });
   }
@@ -121,7 +123,7 @@ ${contextParts.length > 0 ? contextParts.join('\n\n') : '（当前无相关知�
 
   try {
     const stream = await client.chat.completions.create({
-      model: MODEL,
+      model: chatModel,
       messages: [
         { role: 'system', content: systemPrompt },
         ...messages,

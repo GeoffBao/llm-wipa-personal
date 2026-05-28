@@ -574,9 +574,11 @@ a.cite-ref { text-decoration: none; }
 
     <div class="chat-controls">
       <label>Model</label>
-      <select id="model-select">
-        <option value="deepseek-chat" selected>deepseek-chat (fast)</option>
-        <option value="deepseek-reasoner">deepseek-reasoner (deep)</option>
+      <select id="model-select" data-default-model="{{model}}">
+        <option value="deepseek-v4-flash">deepseek-v4-flash (fast)</option>
+        <option value="deepseek-v4-pro">deepseek-v4-pro (deep)</option>
+        <option value="deepseek-chat">deepseek-chat (legacy)</option>
+        <option value="deepseek-reasoner">deepseek-reasoner (legacy)</option>
       </select>
       <div class="control-row">
         <input type="checkbox" id="use-wiki" checked>
@@ -670,6 +672,10 @@ const sendBtn    = document.getElementById('chat-send');
 const sourcesList= document.getElementById('sources-list');
 const sourcesCount=document.getElementById('sources-count');
 const modelSelect= document.getElementById('model-select');
+const defaultModel = modelSelect.dataset.defaultModel;
+if (defaultModel && [...modelSelect.options].some(o => o.value === defaultModel)) {
+  modelSelect.value = defaultModel;
+}
 const useWikiCb  = document.getElementById('use-wiki');
 const clearBtn   = document.getElementById('clear-btn');
 
