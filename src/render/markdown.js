@@ -1,7 +1,8 @@
 import { Marked } from 'marked';
 import { markedHighlight } from 'marked-highlight';
 import hljs from 'highlight.js';
-import { resolve, dirname, relative } from 'path';
+import { existsSync } from 'fs';
+import { resolve, dirname, relative, join } from 'path';
 import { resolveWikilink } from '../vault/wikilinks.js';
 import { resolveAsset } from './assets.js';
 import { VAULT_PATH } from '../../config.js';
@@ -74,15 +75,20 @@ function buildEmbedExtension(fileDir = null) {
     renderer(token) {
       const filename = token.text.trim();
       if (/\.(png|jpg|jpeg|gif|webp|svg)$/i.test(filename)) {
+        const toVaultSrc = (relToVault) =>
+          '/vault/' + relToVault.replace(/\\/g, '/').split('/').map(encodeURIComponent).join('/');
         // 1. Try global asset index (Assets/ folder, also by basename)
         const asset = resolveAsset(filename);
         if (asset) return `<img src="${asset}" alt="${escapeHtml(filename)}" class="article-image" loading="lazy">`;
-        // 2. Fallback: resolve relative to article file → serve via /vault/
+        // 2. Vault-root-relative path (e.g. ![[Raw/work/.../img.png]])
+        if (filename.includes('/') && existsSync(join(VAULT_PATH, filename))) {
+          return `<img src="${toVaultSrc(filename)}" alt="${escapeHtml(filename)}" class="article-image" loading="lazy">`;
+        }
+        // 3. Fallback: resolve relative to article file → serve via /vault/
         if (fileDir) {
           const absPath = resolve(fileDir, filename);
-          const relToVault = relative(VAULT_PATH, absPath).replace(/\\/g, '/');
-          const encodedPath = relToVault.split('/').map(encodeURIComponent).join('/');
-          return `<img src="/vault/${encodedPath}" alt="${escapeHtml(filename)}" class="article-image" loading="lazy">`;
+          const relToVault = relative(VAULT_PATH, absPath);
+          return `<img src="${toVaultSrc(relToVault)}" alt="${escapeHtml(filename)}" class="article-image" loading="lazy">`;
         }
         return `<span class="embed-missing">[图片: ${escapeHtml(filename)}]</span>`;
       }
@@ -124,10 +130,16 @@ function buildImageRenderer(fileDir) {
       if (/^https?:\/\//.test(href) || href.startsWith('/')) {
         return `<img src="${href}" alt="${escapeHtml(text)}" class="article-image" loading="lazy">`;
       }
+      const toVaultSrc = (relToVault) =>
+        '/vault/' + relToVault.replace(/\\/g, '/').split('/').map(encodeURIComponent).join('/');
+      // Vault-root-relative path (e.g. ![alt](Raw/work/.../img.png))
+      if (existsSync(join(VAULT_PATH, href))) {
+        return `<img src="${toVaultSrc(href)}" alt="${escapeHtml(text)}" class="article-image" loading="lazy">`;
+      }
       // Relative path → resolve against article's directory → /vault/...
       const absPath = resolve(fileDir, href);
-      const relToVault = relative(VAULT_PATH, absPath).replace(/\\/g, '/');
-      return `<img src="/vault/${relToVault}" alt="${escapeHtml(text)}" class="article-image" loading="lazy">`;
+      const relToVault = relative(VAULT_PATH, absPath);
+      return `<img src="${toVaultSrc(relToVault)}" alt="${escapeHtml(text)}" class="article-image" loading="lazy">`;
     },
   };
 }
