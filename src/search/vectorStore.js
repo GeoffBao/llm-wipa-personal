@@ -98,7 +98,8 @@ export async function wikiSemanticSearch(query, k = 8) {
   const qvec = Array.from(output[0].data);
   const scored = wikiItems.map(item => ({
     slug: item.slug, title: item.title, section: item.section,
-    snippet: item.snippet, score: cosine(qvec, item.vector),
+    snippet: item.snippet, text: item.text, chunkIdx: item.chunkIdx,
+    score: cosine(qvec, item.vector),
   }));
   scored.sort((a, b) => b.score - a.score);
   // Dedup by slug and title: one result per file (handles slug-collision duplicates)

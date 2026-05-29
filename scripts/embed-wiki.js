@@ -130,6 +130,7 @@ async function main() {
         title: c.title,
         chunkIdx: c.chunkIdx,
         snippet: c.snippet,
+        text: c.text,
         mtimeKey: c.mtimeKey,
         vector: Array.from(output[j].data),
       });
@@ -143,10 +144,13 @@ async function main() {
   let merged;
   if (INCREMENTAL) {
     const newById = Object.fromEntries(newItems.map(x => [x.id, x]));
-    merged = [
-      ...Object.values(existing).filter(x => !newById[x.id]),
-      ...newItems,
-    ];
+    // Only keep cached chunks that (a) still exist in the current vault and
+    // (b) weren't just re-embedded — prunes orphans from deleted/shrunk files.
+    const validIds = new Set(allChunks.map(c => c.id));
+    const keptExisting = Object.values(existing).filter(x => validIds.has(x.id) && !newById[x.id]);
+    const prunedCount = Object.values(existing).filter(x => !validIds.has(x.id)).length;
+    if (prunedCount > 0) console.log(`[embed-wiki] Pruned ${prunedCount} orphan chunk(s)`);
+    merged = [...keptExisting, ...newItems];
   } else {
     merged = newItems;
   }

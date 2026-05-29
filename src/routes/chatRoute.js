@@ -77,7 +77,10 @@ router.post('/api/chat', async (req, res) => {
         if (wikiSources.find(w => w.slug === hit.slug)) continue;
         const f = getFile(hit.slug);
         if (!f) continue;
-        wikiSources.push({ title: f.title, slug: f.slug, section: f.section, body: f.body?.slice(0, 1800) });
+        // Feed the actual matched chunk (preserves chunk-level retrieval precision);
+        // fall back to file head for indices built before `text` was stored.
+        const body = hit.text || f.body?.slice(0, 1800);
+        wikiSources.push({ title: f.title, slug: f.slug, section: f.section, body });
       }
     }
     // MiniSearch fills remaining slots: exact keyword matches that semantic may miss
