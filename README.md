@@ -70,9 +70,154 @@ Agents write back into the KB through daily and weekly automations:
 
 A unified set of skills runs across all agent frontends — Claude Code, Craft Agents, Raycast AI, Cursor, Hermes. The same `wiki-query`, `wiki-ingest`, `memory-journal-sync`, and `tana-wiki-export` skills reach into the same vault regardless of which surface you're working from. You write a skill once; every agent benefits.
 
+Skills live in the vault at `{VAULT_PATH}/share-skills/` (canonical source) and are symlinked or copied into each agent's skill directory (e.g. `~/.claude/skills/`).
+
 **The result**
 
 Your KB grows with every session. Agents don't start cold — they start from your accumulated understanding. Over time the loop compounds: richer KB → better agent answers → more insights worth capturing → richer KB.
+
+---
+
+## Agent Integration
+
+LLM WIPA is designed as the **shared brain** for all local AI agents — not a standalone web app. New agents plug in through three surfaces; you usually need only one or two.
+
+### Design: three integration surfaces
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                        LOCAL AGENT LAYER                          │
+│  Claude Code · Cursor · Raycast AI · Craft Agents · Hermes · …   │
+└───────┬────────────────────┬─────────────────────┬────────────────┘
+        │                    │                     │
+   MCP stdio            HTTP / SSE            Skills + Vault FS
+   (Pull, preferred)   (Pull, direct)        (Pull + Push)
+        │                    │                     │
+        ▼                    ▼                     ▼
+┌───────────────┐   ┌─────────────────┐   ┌──────────────────────┐
+│  mcp/         │   │  Express :3000  │   │  {VAULT_PATH}/       │
+│  4 tools      │──►│  /api/*         │   │  share-skills/       │
+│               │   │  /chat (SSE)    │   │  Wiki/ Raw/ Journey/ │
+└───────────────┘   └─────────────────┘   └──────────────────────┘
+```
+
+| Surface | Direction | When to use | Examples |
+|---|---|---|---|
+| **MCP server** (`mcp/`) | KB → Agent (Pull) | Agent supports MCP (Cursor, Claude Code, Raycast AI) | `search_wiki`, `ask_knowledge_base` |
+| **HTTP API** (`localhost:3000`) | KB → Agent (Pull) | Custom scripts, agents without MCP, skill curl calls | `/api/semantic-search`, `/api/chat` |
+| **Shared skills** (`share-skills/`) | Agent → KB (Push) + guided Pull | Any agent that reads SKILL.md / rules | `wiki-ingest`, `memory-journal-sync` |
+| **Vault filesystem** | Agent → KB (Push) | Direct read/write of Obsidian markdown | Append to `Journey/YYYY-MM-DD.md` |
+
+**Pull** = agent queries your KB before answering (MCP or HTTP).  
+**Push** = agent writes insights back into the vault (skills + automations → `Journey/`, `Wiki/sources/`, `Raw/`).
+
+### How to add a new local agent
+
+**1. Prerequisites (all paths)**
+
+```bash
+npm start                    # llm-wipa server on :3000
+cd mcp && npm install        # only if using MCP
+```
+
+Ensure `.env` has `VAULT_PATH` pointing at your Obsidian vault root.
+
+**2. Pull — MCP (recommended if the agent supports it)**
+
+Add the `llm-kb` MCP server to the agent's config. Same JSON everywhere; only the config file location differs:
+
+| Agent | Config location |
+|---|---|
+| Claude Code | `~/.claude/settings.json` → `mcpServers` |
+| Cursor | `.cursor/mcp.json` or Cursor Settings → MCP |
+| Raycast AI | Settings → Extensions → AI → MCP Servers |
+
+```json
+{
+  "llm-kb": {
+    "command": "node",
+    "args": ["/path/to/llm-wipa/mcp/index.js"],
+    "env": {
+      "VAULT_PATH": "/path/to/your/obsidian/vault",
+      "KB_API_URL": "http://localhost:3000"
+    }
+  }
+}
+```
+
+MCP tools delegate to the running server:
+
+| MCP tool | Backend |
+|---|---|
+| `search_readwise` | `GET /api/semantic-search` |
+| `search_wiki` | `GET /api/search` |
+| `read_wiki_article` | Direct vault read (`Wiki/{section}/*.md`) |
+| `ask_knowledge_base` | `POST /api/chat` (SSE aggregated) |
+
+**3. Pull — HTTP API (no MCP)**
+
+Any agent or script can call the server directly:
+
+```bash
+# Semantic search (Readwise)
+curl "http://localhost:3000/api/semantic-search?q=agent+memory&k=5"
+
+# Keyword search (Wiki)
+curl "http://localhost:3000/api/search?q=记忆系统"
+
+# Full RAG (SSE stream)
+curl -N -X POST http://localhost:3000/api/chat \
+  -H 'Content-Type: application/json' \
+  -d '{"messages":[{"role":"user","content":"..."}],"useWiki":true}'
+```
+
+The `wiki-query` skill uses this pattern when MCP is unavailable.
+
+**4. Push — shared skills**
+
+Point the new agent at vault skills:
+
+```
+{VAULT_PATH}/share-skills/
+├── wiki-query/          # Guided KB Q&A (INDEX → MOC → concepts)
+├── wiki-ingest/         # Raw → Wiki compiler
+├── memory-journal-sync/ # Conversation → Journey/
+├── work-indexer/        # Raw/work/ → wiki-ingest
+└── tana-wiki-export/    # Tana → Wiki/sources/
+```
+
+For Claude Code / Cursor: symlink or copy into `~/.claude/skills/` / `.cursor/skills/`.  
+For Craft Agents: reference the same `share-skills/` paths in project prompts or skill config.
+
+**5. Agent-specific hints**
+
+Add a one-line rule so the agent knows to query KB first:
+
+```markdown
+Before answering knowledge questions, use MCP tools search_wiki / search_readwise
+or call http://localhost:3000/api/semantic-search. Prefer Wiki promoted content over model memory.
+```
+
+For agents that write back: enable `memory-journal-sync` at end of long sessions.
+
+### Current agent matrix
+
+| Agent | Pull (MCP) | Pull (HTTP) | Push (skills) | Notes |
+|---|---|---|---|---|
+| Claude Code | ✅ | via skills | ✅ | `CLAUDE.md` + `~/.claude/skills/` |
+| Cursor | ✅ | via skills | ✅ | MCP + workspace rules |
+| Raycast AI | ✅ | — | — | MCP-only pull; homepage banner has config |
+| Craft Agents | — | via skills | ✅ | Project prompts + `share-skills/` |
+| Hermes / OpenClaw | — | via skills | ✅ | Journey/ maps to OpenClaw memory |
+| Browser UI | — | native | — | `/chat`, `/search` built-in |
+
+### What you do *not* need
+
+- No per-agent fork of llm-wipa — one server, one vault, many clients
+- No cloud bridge — everything is localhost + vault filesystem
+- No custom protocol — MCP stdio + plain HTTP JSON/SSE
+
+See [MCP Server Setup](#mcp-server-setup-raycast-ai--claude-code--cursor) below for copy-paste configs.
 
 ---
 
@@ -395,13 +540,15 @@ Runs daily at 07:00: sync Readwise → embed new articles → server auto-reload
 
 ---
 
-## MCP Server Setup (Raycast AI / Claude Code)
+## MCP Server Setup (Raycast AI / Claude Code / Cursor)
 
 Install dependencies:
 
 ```bash
 cd mcp && npm install
 ```
+
+> **Requires** `llm-wipa` running at `http://localhost:3000` (`npm start`). MCP tools proxy to this server except `read_wiki_article`, which reads the vault directly.
 
 ### Raycast AI
 
@@ -438,6 +585,45 @@ Add to `~/.claude/settings.json`:
   }
 }
 ```
+
+Add to `~/.claude/CLAUDE.md` or project `CLAUDE.md`:
+
+```markdown
+## MCP: LLM KB
+Tools: search_readwise, search_wiki, read_wiki_article, ask_knowledge_base
+Query the personal KB before answering knowledge questions.
+Skills in share-skills/: wiki-query, wiki-ingest, memory-journal-sync.
+```
+
+### Cursor
+
+Add to `.cursor/mcp.json` (project) or Cursor Settings → MCP:
+
+```json
+{
+  "mcpServers": {
+    "llm-kb": {
+      "command": "node",
+      "args": ["/path/to/llm-wipa/mcp/index.js"],
+      "env": {
+        "VAULT_PATH": "/path/to/your/obsidian/vault",
+        "KB_API_URL": "http://localhost:3000"
+      }
+    }
+  }
+}
+```
+
+Symlink vault skills for Push workflows:
+
+```bash
+ln -sf "$VAULT_PATH/share-skills/wiki-query" ~/.claude/skills/wiki-query   # example
+# or configure Cursor skills to read from {VAULT_PATH}/share-skills/
+```
+
+### Other MCP-capable agents
+
+Use the same `llm-kb` JSON block. Set `KB_API_URL` if the server runs on a non-default port. For agents without MCP, use [HTTP API](#agent-integration) or `wiki-query` skill curl patterns.
 
 Once configured, your AI assistant will call `search_readwise`, `search_wiki`, and `ask_knowledge_base` automatically when answering knowledge questions.
 
@@ -479,7 +665,8 @@ YourVault/
 │   └── prompts/         # Prompt templates
 ├── Notes/               # Personal notes (browseable, searchable)
 ├── Projects/            # Project documentation
-├── Journey/             # Daily memory entries (YYYY-MM-DD.md)
+├── Journey/             # Daily memory entries (YYYY-MM-DD.md) — Agent → KB push target
+├── share-skills/        # Canonical agent skills (wiki-query, wiki-ingest, …)
 └── Raw/
     ├── readwise-sync-data.json      # Readwise library (from sync script)
     ├── readwise-vector-index.json   # Readwise embeddings (from embed-readwise.js)
