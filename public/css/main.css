@@ -1258,8 +1258,44 @@ body.loop-modal-open { overflow: hidden; }
 
 /* ===== BROWSE PAGE ===== */
 .browse-page { max-width: 900px; }
-.browse-header { display: flex; align-items: baseline; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+.browse-header { display: flex; align-items: baseline; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
 .browse-count { font-size: 0.875rem; color: var(--text-muted); }
+
+/* Browse toolbar */
+.browse-toolbar {
+  display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+.browse-sort-group { display: flex; gap: 0.25rem; }
+.browse-sort-btn, .browse-group-btn {
+  display: inline-flex; align-items: center; gap: 0.35rem;
+  padding: 0.3rem 0.7rem; border-radius: var(--radius-sm);
+  border: 1px solid var(--border-light); background: var(--bg-card);
+  color: var(--text-muted); font-size: 0.78rem; cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  font-family: inherit;
+}
+.browse-sort-btn:hover, .browse-group-btn:hover {
+  background: var(--bg-hover); color: var(--text); border-color: var(--border);
+}
+.browse-sort-btn.active {
+  background: var(--blue); color: #fff; border-color: var(--blue);
+}
+.browse-group-btn { margin-left: auto; }
+.browse-group-btn.active {
+  background: var(--bg-hover); color: var(--text); border-color: var(--blue);
+}
+
+/* Group month headers inside browse-grid */
+.browse-group-header {
+  grid-column: 1 / -1;
+  font-size: 0.72rem; font-weight: 600; color: var(--text-light);
+  text-transform: uppercase; letter-spacing: 0.07em;
+  padding: 0.5rem 0 0.25rem;
+  border-top: 1px solid var(--border-light);
+  margin-top: 0.25rem;
+}
+.browse-group-header:first-child { border-top: none; margin-top: 0; }
 .browse-list { display: flex; flex-direction: column; }
 .browse-item {
   display: flex;
