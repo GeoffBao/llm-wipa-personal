@@ -120,6 +120,32 @@ html[data-theme="dark"] .pane-tab-count { background: rgba(255,255,255,0.06); }
 .pane-panel .backlinks-more { padding: 4px 8px; color: var(--blue); font-style: italic; font-size: 0.78rem; cursor: pointer; }
 .pane-panel .backlinks-more:hover { text-decoration: underline; }
 
+.pane-panel .diagrams-list {
+  list-style: none;
+  padding: 6px 2px;
+  margin: 0;
+  font-size: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.pane-panel .diagrams-list li {
+  margin: 0;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: background 0.1s;
+}
+.pane-panel .diagrams-list li:hover { background: var(--bg-hover); }
+.pane-panel .diagram-link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text);
+  text-decoration: none;
+}
+.pane-panel .diagram-link:hover { color: var(--blue); }
+.pane-panel .diagram-link svg { flex-shrink: 0; opacity: 0.6; }
+
 .pane-empty {
   padding: 14px 8px;
   color: var(--text-light);

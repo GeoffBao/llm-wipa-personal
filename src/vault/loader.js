@@ -8,6 +8,7 @@ import { parseFile } from './parser.js';
 export const bySlug = new Map();        // slug → VaultFile
 export const byTitle = new Map();       // exact title → VaultFile
 export const byTitleLower = new Map();  // lowercase title → VaultFile
+export const byFilename = new Map();    // basename(filepath, '.md') → VaultFile (canvas file-node resolution)
 
 // Separate reading index (weread books with rich metadata)
 export const readingIndex = new Map();  // slug → BookFile
@@ -53,6 +54,7 @@ async function loadFiles(baseDir, pattern, defaultSection) {
     bySlug.set(slug, file);
     byTitle.set(title, file);
     byTitleLower.set(title.toLowerCase(), file);
+    byFilename.set(basename(filepath, '.md'), file);
   }
   return results;
 }
@@ -61,6 +63,7 @@ export async function loadVault() {
   bySlug.clear();
   byTitle.clear();
   byTitleLower.clear();
+  byFilename.clear();
   readingIndex.clear();
 
   const wikiBase = join(VAULT_PATH, 'Wiki');
@@ -165,19 +168,32 @@ export async function updateFile(filepath) {
 
     // Remove stale entry
     for (const [s, f] of bySlug) {
-      if (f.filepath === filepath) { bySlug.delete(s); byTitle.delete(f.title); byTitleLower.delete(f.title.toLowerCase()); break; }
+      if (f.filepath === filepath) {
+        bySlug.delete(s);
+        byTitle.delete(f.title);
+        byTitleLower.delete(f.title.toLowerCase());
+        byFilename.delete(basename(f.filepath, '.md'));
+        break;
+      }
     }
 
     const file = { slug, title, filepath, relpath, section, meta, body, raw, mtime: s.mtime };
     bySlug.set(slug, file);
     byTitle.set(title, file);
     byTitleLower.set(title.toLowerCase(), file);
+    byFilename.set(basename(filepath, '.md'), file);
     return file;
   } catch { return null; }
 }
 
 export function removeFile(filepath) {
   for (const [slug, f] of bySlug) {
-    if (f.filepath === filepath) { bySlug.delete(slug); byTitle.delete(f.title); byTitleLower.delete(f.title.toLowerCase()); return; }
+    if (f.filepath === filepath) {
+      bySlug.delete(slug);
+      byTitle.delete(f.title);
+      byTitleLower.delete(f.title.toLowerCase());
+      byFilename.delete(basename(f.filepath, '.md'));
+      return;
+    }
   }
 }

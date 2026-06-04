@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { SECTION_LABELS } from '../../config.js';
 import { getFile, getAllFiles } from '../vault/loader.js';
 import { getBacklinks } from '../vault/backlinks.js';
+import { getDiagramsForSlug } from '../vault/diagrams.js';
 import { renderMarkdown } from '../render/markdown.js';
 import { extractTOC, renderTOC } from '../render/toc.js';
 import { render } from '../render/template.js';
@@ -32,6 +33,8 @@ router.get('/wiki/:slug', async (req, res) => {
   const backlinksHtml = renderBacklinksHtml(backlinks);
   const tagBadges = renderTagBadges(file.meta.tags || []);
   const sectionLabel = sectionLabels[file.section] || file.section;
+  const diagrams = getDiagramsForSlug(file.slug);
+  const diagramsHtml = renderDiagramsHtml(diagrams);
 
   const html_out = await render('article.html', {
     pageTitle: `${file.title} — LLM KB`,
@@ -50,6 +53,8 @@ router.get('/wiki/:slug', async (req, res) => {
     updatedAt: file.meta.updated || '',
     activeNav: file.section,
     hasSide: !!(infobox || tocHtml),
+    diagrams: diagramsHtml,
+    hasDiagrams: diagrams.length > 0,
   });
 
   res.send(html_out);
@@ -97,6 +102,18 @@ function renderTagBadges(tags) {
   return tags.map(t =>
     `<a href="/browse/tags/${encodeURIComponent(t)}" class="tag">${t}</a>`
   ).join('');
+}
+
+function renderDiagramsHtml(diagrams) {
+  if (!diagrams.length) return '';
+  const items = diagrams.map(d => {
+    const href = d.type === 'canvas' ? `/diagrams/${d.slug}` : `/excalidraw/${d.slug}`;
+    const icon = d.type === 'canvas'
+      ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>`
+      : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>`;
+    return `<li><a href="${href}" class="diagram-link">${icon} ${d.title}</a></li>`;
+  }).join('');
+  return `<ul class="diagrams-list">${items}</ul>`;
 }
 
 function renderSuggestions(results) {

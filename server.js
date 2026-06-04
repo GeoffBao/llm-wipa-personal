@@ -18,6 +18,7 @@ import libraryRouter from './src/routes/libraryRoute.js';
 import graphRouter from './src/routes/graph.js';
 import canvasRouter from './src/routes/canvasRoute.js';
 import { loadCanvases } from './src/vault/canvas.js';
+import { buildDiagramsIndex } from './src/vault/diagrams.js';
 import excalidrawRouter from './src/routes/excalidrawRoute.js';
 import { loadExcalidrawFiles } from './src/vault/excalidraw.js';
 import readwiseRouter from './src/routes/readwiseRoute.js';
@@ -90,6 +91,7 @@ async function start() {
   buildAssetIndex();
   await loadCanvases();
   await loadExcalidrawFiles();
+  buildDiagramsIndex();
   loadVectorStore();     // non-blocking: Readwise semantic search available once index loads
   loadWikiVectorStore(); // non-blocking: Wiki semantic search available once index loads
 
@@ -131,7 +133,7 @@ async function start() {
   chokidar.watch(`${diagramsDir}/**/*.canvas`, { ignoreInitial: true, awaitWriteFinish: { stabilityThreshold: 300, pollInterval: 100 } })
     .on('all', () => {
       clearTimeout(canvasTimer);
-      canvasTimer = setTimeout(() => loadCanvases().then(() => console.log('[watcher] Canvases reloaded')), 300);
+      canvasTimer = setTimeout(() => loadCanvases().then(() => { buildDiagramsIndex(); console.log('[watcher] Canvases reloaded'); }), 300);
     });
 
   let exTimer = null;
