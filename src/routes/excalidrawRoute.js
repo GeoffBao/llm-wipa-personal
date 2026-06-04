@@ -73,6 +73,7 @@ router.get('/excalidraw/:slug/edit', async (req, res) => {
   const drawing = getExcalidrawFile(req.params.slug);
   if (!drawing) return res.status(404).send('Drawing not found');
 
+
   res.send(await renderDirect('excalidraw-editor.html', {
     pageTitle: `Edit: ${drawing.title} — LLM KB`,
     slug: drawing.slug,

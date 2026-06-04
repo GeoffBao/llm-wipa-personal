@@ -123,6 +123,26 @@ async function start() {
     .on('change', path => scheduleRebuild(path, 'change'))
     .on('unlink', path => scheduleRebuild(path, 'remove'));
 
+  // Watch canvas + excalidraw sources — reload their indices on any change
+  const diagramsDir = join(VAULT_PATH, 'Diagrams');
+  const excalidrawDir = process.env.EXCALIDRAW_DIR;
+
+  let canvasTimer = null;
+  chokidar.watch(`${diagramsDir}/**/*.canvas`, { ignoreInitial: true, awaitWriteFinish: { stabilityThreshold: 300, pollInterval: 100 } })
+    .on('all', () => {
+      clearTimeout(canvasTimer);
+      canvasTimer = setTimeout(() => loadCanvases().then(() => console.log('[watcher] Canvases reloaded')), 300);
+    });
+
+  let exTimer = null;
+  const exGlobs = [`${diagramsDir}/**/*.excalidraw.md`];
+  if (excalidrawDir) exGlobs.push(`${excalidrawDir}/**/*.excalidraw`, `${excalidrawDir}/**/*.excalidraw.md`);
+  chokidar.watch(exGlobs, { ignoreInitial: true, awaitWriteFinish: { stabilityThreshold: 300, pollInterval: 100 } })
+    .on('all', () => {
+      clearTimeout(exTimer);
+      exTimer = setTimeout(() => loadExcalidrawFiles().then(() => console.log('[watcher] Excalidraw reloaded')), 300);
+    });
+
   // Clear template cache in dev (--watch mode restarts automatically)
   if (process.env.NODE_ENV !== 'production') {
     clearCache();

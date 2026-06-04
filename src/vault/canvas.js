@@ -11,7 +11,7 @@ export async function loadCanvases() {
   const diagramsDir = join(VAULT_PATH, 'Diagrams');
 
   let files;
-  try { files = await glob('*.canvas', { cwd: diagramsDir, absolute: false }); }
+  try { files = await glob('**/*.canvas', { cwd: diagramsDir, absolute: false }); }
   catch { return; }
 
   for (const filename of files) {
