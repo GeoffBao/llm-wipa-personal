@@ -93,7 +93,7 @@
 
       const nodeG = g.append('g').selectAll('g').data(nodes).enter().append('g')
         .style('cursor', 'pointer')
-        .on('click', (_, d) => { if (!d.center) window.location.href = '/wiki/' + d.id; })
+        .on('click', (_, d) => { if (!d.center) (window.__wipaTabs?.navigateTab || (u => { window.location.href = u; }))('/wiki/' + d.id); })
         .call(d3.drag()
           .on('start', (ev, d) => { if (!ev.active) sim.alphaTarget(0.25).restart(); d.fx = d.x; d.fy = d.y; })
           .on('drag', (ev, d) => { d.fx = ev.x; d.fy = ev.y; })

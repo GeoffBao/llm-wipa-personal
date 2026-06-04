@@ -69,10 +69,10 @@ export function removeSearchDoc(slug) {
 
 export function search(query, limit = 20) {
   if (!query || query.trim().length === 0) return [];
-  return searchIndex.search(query, { limit });
+  return searchIndex.search(query).slice(0, limit);
 }
 
 export function autocomplete(query, limit = 5) {
   if (!query || query.trim().length === 0) return [];
-  return searchIndex.search(query, { limit, fuzzy: 0.15, prefix: true });
+  return searchIndex.search(query, { fuzzy: 0.15, prefix: true }).slice(0, limit);
 }

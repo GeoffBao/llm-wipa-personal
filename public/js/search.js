@@ -42,7 +42,7 @@
 
   async function fetchSuggestions(q) {
     try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
+      const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&limit=8`);
       const data = await res.json();
       renderDropdown(data, q);
     } catch (_) {

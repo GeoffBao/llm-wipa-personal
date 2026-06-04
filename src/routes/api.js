@@ -59,13 +59,14 @@ router.get('/api/local-graph/:slug', (req, res) => {
 
 router.get('/api/search', (req, res) => {
   const q = (req.query.q || '').trim();
-  const results = autocomplete(q, 8);
-  res.json(results.map(r => ({
+  const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 25, 1), 50);
+  const results = autocomplete(q, limit).map(r => ({
     title: r.title,
     slug: r.slug,
     section: r.section,
     type: r.type,
-  })));
+  }));
+  res.json(results);
 });
 
 router.get('/api/random', (req, res) => {

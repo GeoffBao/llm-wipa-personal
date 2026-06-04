@@ -32,7 +32,12 @@
     { id: 'toggle-theme',  title: 'Toggle Dark / Light Mode', icon: 'moon',   action: () => window.__toggleTheme?.() },
   ];
 
-  function nav(href) { window.location.href = href; }
+  const SEARCH_LIMIT = 25;
+
+  function nav(href) {
+    if (window.__wipaTabs?.navigateTab) window.__wipaTabs.navigateTab(href);
+    else window.location.href = href;
+  }
 
   let root, input, list, backdrop;
   let items = [];
@@ -102,6 +107,10 @@
         items.push({ type: 'note', slug: r.slug });
         html += itemHtml({ title: r.title, icon: 'note', tag: r.section });
       });
+      if (results.length >= SEARCH_LIMIT) {
+        items.push({ type: 'more', query: q });
+        html += itemHtml({ title: `View all results for "${q}" →`, icon: 'search', tag: null });
+      }
     }
 
     if (!items.length) {
@@ -150,10 +159,10 @@
     if (searchAbort) searchAbort.abort();
     searchAbort = new AbortController();
     try {
-      const resp = await fetch('/api/search?q=' + encodeURIComponent(q), { signal: searchAbort.signal });
+      const resp = await fetch('/api/search?q=' + encodeURIComponent(q) + '&limit=' + SEARCH_LIMIT, { signal: searchAbort.signal });
       const data = await resp.json();
       if (q !== lastQuery) return;
-      render(Array.isArray(data) ? data.slice(0, 8) : []);
+      render(Array.isArray(data) ? data : []);
     } catch (e) {
       if (e.name !== 'AbortError') render([]);
     }
@@ -164,6 +173,7 @@
     if (!it) return;
     if (it.type === 'ask') { close(); nav('/chat?q=' + encodeURIComponent(it.query)); }
     else if (it.type === 'cmd') { close(); it.cmd.action(); }
+    else if (it.type === 'more') { close(); nav('/search?q=' + encodeURIComponent(it.query)); }
     else if (it.type === 'note') { close(); nav('/wiki/' + it.slug); }
   }
 

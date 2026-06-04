@@ -75,8 +75,10 @@
     return escapeHtml(s).replace(/"/g, '&quot;');
   }
 
+  let currentContentUrl = window.location.pathname + window.location.search;
+
   async function navigateTab(url, pushState) {
-    if (url === window.location.pathname + window.location.search) return;
+    if (url === currentContentUrl) return;
 
     if (needsFullPage(url)) {
       window.location.href = url;
@@ -94,6 +96,7 @@
         const newTitle = doc.querySelector('title')?.textContent;
         if (newTitle) document.title = newTitle;
         if (pushState !== false) history.pushState({ wipaTab: url }, '', url);
+        currentContentUrl = url;
         try { localStorage.setItem(ACTIVE_KEY, url); } catch (_) {}
         renderTabs();
         window.dispatchEvent(new CustomEvent('wipa:navigate', { detail: { url } }));
@@ -162,8 +165,9 @@
       navigateTab(url);
     });
 
-    window.addEventListener('popstate', (e) => {
-      if (e.state?.wipaTab) navigateTab(e.state.wipaTab, false);
+    window.addEventListener('popstate', () => {
+      const url = history.state?.wipaTab ?? (window.location.pathname + window.location.search);
+      navigateTab(url, false);
     });
   }
 
@@ -181,6 +185,11 @@
   });
 
   document.addEventListener('DOMContentLoaded', () => {
+    const path = window.location.pathname + window.location.search;
+    currentContentUrl = path;
+    if (!history.state?.wipaTab) {
+      history.replaceState({ wipaTab: path }, '', path);
+    }
     renderTabs();
     bindEvents();
   });
