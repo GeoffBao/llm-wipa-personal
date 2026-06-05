@@ -56,7 +56,11 @@ router.get('/excalidraw/:slug', async (req, res) => {
   const drawing = getExcalidrawFile(req.params.slug);
   if (!drawing) return res.status(404).send('Drawing not found');
 
-  const drawingData = JSON.stringify({ elements: drawing.elements, background: drawing.background });
+  const drawingData = JSON.stringify({
+    elements: drawing.elements,
+    background: drawing.background,
+    files: drawing.files || {},
+  });
 
   res.send(await renderDirect('excalidraw.html', {
     pageTitle: `${drawing.title} — LLM KB`,
@@ -78,7 +82,11 @@ router.get('/excalidraw/:slug/edit', async (req, res) => {
     pageTitle: `Edit: ${drawing.title} — LLM KB`,
     slug: drawing.slug,
     title: drawing.title,
-    drawingData: JSON.stringify({ elements: drawing.elements, appState: { viewBackgroundColor: drawing.background } }),
+    drawingData: JSON.stringify({
+      elements: drawing.elements,
+      appState: { viewBackgroundColor: drawing.background },
+      files: drawing.files || {},
+    }),
     isNew: false,
   }));
 });
@@ -97,7 +105,11 @@ router.get('/api/excalidraw/:slug/thumbnail.svg', (req, res) => {
 router.get('/api/excalidraw/:slug', (req, res) => {
   const drawing = getExcalidrawFile(req.params.slug);
   if (!drawing) return res.status(404).json({ error: 'Not found' });
-  res.json({ elements: drawing.elements, appState: { viewBackgroundColor: drawing.background } });
+  res.json({
+    elements: drawing.elements,
+    appState: { viewBackgroundColor: drawing.background },
+    files: drawing.files || {},
+  });
 });
 
 // ── API: save existing file ───────────────────────────────────────────────────

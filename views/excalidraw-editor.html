@@ -130,6 +130,7 @@
 
       const initialData = INITIAL_DATA ? {
         elements: INITIAL_DATA.elements || [],
+        files: INITIAL_DATA.files || {},
         appState: {
           ...(INITIAL_DATA.appState || {}),
           // Restore background color; defaults to white for new files

@@ -91,6 +91,7 @@ export async function loadExcalidrawFiles() {
 
       const elements = (data.elements || []).filter(e => !e.isDeleted);
       const background = data.appState?.viewBackgroundColor || '#ffffff';
+      const files = data.files || {};
 
       excalidrawIndex.set(slug, {
         slug,
@@ -98,6 +99,7 @@ export async function loadExcalidrawFiles() {
         filepath,
         mtime: fileStat.mtime,
         elements,
+        files,
         background,
         elementCount: elements.length,
         wrapped, // true = Obsidian markdown-wrapper format; save must update ## Drawing block
@@ -123,9 +125,27 @@ export function getExcalidrawDir() {
 // Save elements + appState back to disk.
 // For wrapped Obsidian files (.excalidraw.md), only the ## Drawing block is replaced
 // so frontmatter, Text Elements, and plugin metadata are preserved.
+function mergeSceneFiles(incoming = {}, existing = {}) {
+  const merged = { ...existing };
+  for (const [id, file] of Object.entries(incoming)) {
+    if (file?.dataURL) merged[id] = file;
+  }
+  return merged;
+}
+
 export async function saveExcalidrawFile(slug, payload) {
   const drawing = excalidrawIndex.get(slug);
   if (!drawing) throw new Error(`Drawing not found: ${slug}`);
+
+  // Keep embedded images when the editor reloads without files (auto-save used to wipe them).
+  let existingFiles = drawing.files || {};
+  if (!Object.keys(existingFiles).length) {
+    try {
+      const raw = await readFile(drawing.filepath, 'utf8');
+      const { data } = parseExcalidrawRaw(raw);
+      existingFiles = data?.files || {};
+    } catch { /* ignore */ }
+  }
 
   const sceneData = {
     type: 'excalidraw',
@@ -133,7 +153,7 @@ export async function saveExcalidrawFile(slug, payload) {
     source: 'llm-wipa',
     elements: payload.elements || [],
     appState: payload.appState || {},
-    files: payload.files || {},
+    files: mergeSceneFiles(payload.files, existingFiles),
   };
 
   if (drawing.wrapped) {
@@ -158,6 +178,7 @@ export async function saveExcalidrawFile(slug, payload) {
   excalidrawIndex.set(slug, {
     ...drawing,
     elements,
+    files: sceneData.files || {},
     background: sceneData.appState?.viewBackgroundColor || '#ffffff',
     elementCount: elements.length,
     mtime: fileStat.mtime,

@@ -66,7 +66,7 @@
   <script>
   (() => {
     const DATA = {{{drawingData}}};
-    const { elements, background } = DATA;
+    const { elements, background, files = {} } = DATA;
 
     const svgEl = document.getElementById('ex-svg');
     const container = document.getElementById('ex-canvas');
@@ -96,7 +96,7 @@
             maxX = Math.max(maxX, e.x + px);
             maxY = Math.max(maxY, e.y + py);
           }
-        } else {
+        } else if (e.x !== undefined) {
           minX = Math.min(minX, e.x);
           minY = Math.min(minY, e.y);
           maxX = Math.max(maxX, e.x + (e.width || 0));
@@ -222,6 +222,18 @@
       return svgNS('path', attrs);
     }
 
+    function renderImage(e) {
+      const file = files[e.fileId];
+      if (!file?.dataURL) return null;
+      const img = svgNS('image', {
+        x: e.x, y: e.y, width: e.width, height: e.height,
+        href: file.dataURL,
+        opacity: (e.opacity ?? 100) / 100,
+        preserveAspectRatio: 'none',
+      });
+      return img;
+    }
+
     function renderText(e) {
       const g = svgNS('g', { opacity: (e.opacity ?? 100) / 100 });
       const lines = (e.text || '').split('\n');
@@ -285,7 +297,7 @@
       svgEl.appendChild(bg);
 
       // Render order: groups/frames first, then others, text last
-      const order = ['rectangle','ellipse','diamond','line','arrow','text'];
+      const order = ['rectangle','ellipse','diamond','image','line','arrow','text'];
       const sorted = [...elements].sort((a, b) => {
         const ai = order.indexOf(a.type), bi = order.indexOf(b.type);
         return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
@@ -297,6 +309,7 @@
         else if (e.type === 'ellipse') el = renderEllipse(e);
         else if (e.type === 'diamond') el = renderDiamond(e);
         else if (e.type === 'arrow' || e.type === 'line') el = renderLineOrArrow(e, defs);
+        else if (e.type === 'image') el = renderImage(e);
         else if (e.type === 'text') el = renderText(e);
         if (el) svgEl.appendChild(el);
       }
