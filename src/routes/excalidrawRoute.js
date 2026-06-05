@@ -15,7 +15,7 @@ router.get('/excalidraw', async (req, res) => {
     <div class="ex-gallery-card">
       <a href="/excalidraw/${d.slug}" class="ex-gallery-preview">
         <div class="ex-gallery-thumb">
-          <img src="/api/excalidraw/${d.slug}/thumbnail.svg" alt="${d.title}" loading="lazy">
+          <img src="/api/excalidraw/${d.slug}/thumbnail.svg?v=${d.mtime ? new Date(d.mtime).getTime() : 0}" alt="${d.title}" loading="lazy">
         </div>
         <div class="ex-gallery-title" style="padding:0.75rem 0.75rem 0.25rem">${d.title}</div>
         <div class="ex-gallery-meta" style="padding:0 0.75rem 0.5rem">${d.elementCount} elements</div>
@@ -141,7 +141,7 @@ export default router;
 
 // ── Thumbnail SVG generator ────────────────────────────────────────────────────
 
-function buildThumbnailSvg({ elements, background }) {
+function buildThumbnailSvg({ elements, background, files = {} }) {
   const W = 200, H = 130, PAD = 10;
 
   if (!elements.length) {
@@ -150,11 +150,19 @@ function buildThumbnailSvg({ elements, background }) {
 
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   for (const el of elements) {
-    if (el.x === undefined) continue;
-    minX = Math.min(minX, el.x);
-    minY = Math.min(minY, el.y);
-    maxX = Math.max(maxX, el.x + (el.width || 0));
-    maxY = Math.max(maxY, el.y + (el.height || 0));
+    if (el.type === 'arrow' || el.type === 'line') {
+      for (const [px, py] of (el.points || [])) {
+        minX = Math.min(minX, el.x + px);
+        minY = Math.min(minY, el.y + py);
+        maxX = Math.max(maxX, el.x + px);
+        maxY = Math.max(maxY, el.y + py);
+      }
+    } else if (el.x !== undefined) {
+      minX = Math.min(minX, el.x);
+      minY = Math.min(minY, el.y);
+      maxX = Math.max(maxX, el.x + (el.width || 0));
+      maxY = Math.max(maxY, el.y + (el.height || 0));
+    }
   }
   if (!isFinite(minX)) return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}"><rect width="${W}" height="${H}" fill="${background || '#fff'}"/></svg>`;
 
@@ -184,6 +192,12 @@ function buildThumbnailSvg({ elements, background }) {
       }
       case 'text':
         return w > 2 ? `<rect x="${f(x)}" y="${f(y+h*0.3)}" width="${f(w)}" height="${f(Math.max(1, h*0.2))}" fill="${stroke}" opacity="0.35" rx="1"/>` : '';
+      case 'image': {
+        const file = files[el.fileId];
+        if (!file?.dataURL) return '';
+        const opacity = ((el.opacity ?? 100) / 100).toFixed(2);
+        return `<image x="${f(x)}" y="${f(y)}" width="${f(w)}" height="${f(h)}" href="${escapeSvgAttr(file.dataURL)}" preserveAspectRatio="none" opacity="${opacity}"/>`;
+      }
       case 'line':
       case 'arrow': {
         const pts = el.points || [[0, 0], [el.width || 40, el.height || 0]];
@@ -202,3 +216,7 @@ function buildThumbnailSvg({ elements, background }) {
 }
 
 function f(n) { return n.toFixed(1); }
+
+function escapeSvgAttr(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+}
