@@ -1,0 +1,19 @@
+<div class="viz-viewer">
+  <div class="article-breadcrumb">{{{breadcrumb}}}</div>
+  <div class="viz-viewer-head">
+    <h1 class="page-title">{{title}}</h1>
+    <div class="viz-viewer-actions">
+      <span class="viz-viewer-meta">{{date}} · {{size}}</span>
+      <a href="/visualizations/{{slug}}/raw" target="_blank" rel="noopener" class="viz-open-btn">在新标签打开 ↗</a>
+    </div>
+  </div>
+  <div class="viz-frame-wrap">
+    <iframe
+      class="viz-frame"
+      src="/visualizations/{{slug}}/raw"
+      title="{{title}}"
+      sandbox="allow-scripts allow-popups allow-same-origin"
+      loading="lazy"
+    ></iframe>
+  </div>
+</div>

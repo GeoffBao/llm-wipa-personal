@@ -21,6 +21,8 @@ import { loadCanvases } from './src/vault/canvas.js';
 import { buildDiagramsIndex } from './src/vault/diagrams.js';
 import excalidrawRouter from './src/routes/excalidrawRoute.js';
 import { loadExcalidrawFiles } from './src/vault/excalidraw.js';
+import visualizationsRouter from './src/routes/visualizationsRoute.js';
+import { loadVisualizations } from './src/vault/visualizations.js';
 import readwiseRouter from './src/routes/readwiseRoute.js';
 import flipbookRouter from './src/routes/flipbookRoute.js';
 import journeyRouter from './src/routes/journeyRoute.js';
@@ -59,6 +61,7 @@ app.use(libraryRouter);
 app.use(graphRouter);
 app.use(canvasRouter);
 app.use(excalidrawRouter);
+app.use(visualizationsRouter);
 app.use(readwiseRouter);
 app.use(flipbookRouter);
 app.use(journeyRouter);
@@ -91,6 +94,7 @@ async function start() {
   buildAssetIndex();
   await loadCanvases();
   await loadExcalidrawFiles();
+  await loadVisualizations();
   buildDiagramsIndex();
   loadVectorStore();     // non-blocking: Readwise semantic search available once index loads
   loadWikiVectorStore(); // non-blocking: Wiki semantic search available once index loads
@@ -134,6 +138,14 @@ async function start() {
     .on('all', () => {
       clearTimeout(canvasTimer);
       canvasTimer = setTimeout(() => loadCanvases().then(() => { buildDiagramsIndex(); console.log('[watcher] Canvases reloaded'); }), 300);
+    });
+
+  let vizTimer = null;
+  const vizDir = join(VAULT_PATH, 'Visualizations');
+  chokidar.watch(`${vizDir}/**/*.html`, { ignoreInitial: true, awaitWriteFinish: { stabilityThreshold: 300, pollInterval: 100 } })
+    .on('all', () => {
+      clearTimeout(vizTimer);
+      vizTimer = setTimeout(() => loadVisualizations().then(() => console.log('[watcher] Visualizations reloaded')), 300);
     });
 
   let exTimer = null;
