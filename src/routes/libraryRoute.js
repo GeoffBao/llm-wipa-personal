@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { readFile } from 'fs/promises';
-import { readFileSync } from 'fs';
+import { readFileSync, existsSync, readdirSync } from 'fs';
 import { join } from 'path';
 import { getAllBooks } from '../vault/loader.js';
 import { renderMarkdown } from '../render/markdown.js';
@@ -12,6 +12,38 @@ const router = Router();
 const SYNC_FILE             = () => join(VAULT_PATH, 'Raw', 'readwise-sync-data.json');
 const WEREAD_SYNC_FILE      = () => join(VAULT_PATH, 'Raw', 'weread-sync-data.json');
 const APPLE_BOOKS_SYNC_FILE = () => join(VAULT_PATH, 'Raw', 'apple-books-sync-data.json');
+
+// ── KB index (books with generated knowledge bases) ────────────────────────────
+
+function buildKBIndex() {
+  const base = join(VAULT_PATH, 'AI-Generated', 'exports', 'books');
+  const index = new Map(); // normalizedTitle → { dirName, htmlFiles }
+  if (!existsSync(base)) return index;
+  const normalize = s => s.toLowerCase().replace(/[：:《》\s「」【】\-_·]/g, '').trim();
+  for (const entry of readdirSync(base, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    const dirPath = join(base, entry.name);
+    const htmlFiles = readdirSync(dirPath).filter(f => f.endsWith('.html'));
+    index.set(normalize(entry.name), { dirName: entry.name, htmlFiles });
+  }
+  return index;
+}
+
+let _kbIndex = null;
+function getKBIndex() {
+  if (!_kbIndex) _kbIndex = buildKBIndex();
+  return _kbIndex;
+}
+
+function findKBEntry(title) {
+  const idx = getKBIndex();
+  const normalize = s => s.toLowerCase().replace(/[：:《》\s「」【】\-_·]/g, '').trim();
+  const want = normalize(title);
+  for (const [key, val] of idx.entries()) {
+    if (key.includes(want) || want.includes(key)) return val;
+  }
+  return null;
+}
 
 function toDateStr(val) {
   if (!val) return '';
@@ -71,6 +103,7 @@ function loadWeReadBooks() {
     const progressPct = parseInt(progressStr) || 0;
     const slug = book.slug.replace('reading-', '');
     const sync = syncMap.get(book.title?.toLowerCase().trim()); // fresh data if available
+    const kbEntry = findKBEntry(book.title);
 
     return {
       id:          `wr-${book.slug}`,
@@ -83,9 +116,11 @@ function loadWeReadBooks() {
       reviewCount: sync?.reviewCount ?? (m.reviewCount || 0),
       readingTime: sync?.readingTime || String(m.readingTime || m.readingtime || ''),
       lastReadDate: sync?.lastReadDate || toDateStr(m.lastReadDate || m.lastreaddate || m.finishedDate || m.finisheddate || m.readingDate || m.readingdate || ''),
-      url:         `/reading/${slug}`,
+      url:         `/books/${slug}`,
       isFinished:  (sync ? sync.isFinished : false) || progressPct >= 99 || !!m.finishedDate || !!m.finisheddate,
       isLocal:     true,
+      hasKB:       !!kbEntry,
+      kbHtmlFiles: kbEntry?.htmlFiles || [],
     };
   });
 }
@@ -247,6 +282,9 @@ function renderBookCard(book) {
   const srcBadge = srcLabel
     ? `<span class="bk-badge ${srcCls}">${srcLabel}</span>`
     : '';
+  const kbBadge = book.hasKB
+    ? `<span class="bk-badge bk-badge-kb">✦ KB</span>`
+    : '';
   const syncBadge = '';
 
   const typeBadge = `<span class="bk-badge bk-badge-type">图书</span>`;
@@ -266,7 +304,7 @@ function renderBookCard(book) {
     <div class="bk-body">
       <div class="bk-title">${book.title}</div>
       ${book.author ? `<div class="bk-author">${book.author}</div>` : ''}
-      <div class="bk-badges">${syncBadge}${srcBadge}${typeBadge}${statusBadge}</div>
+      <div class="bk-badges">${syncBadge}${kbBadge}${srcBadge}${typeBadge}${statusBadge}</div>
       ${statsHtml}${dateHtml}
     </div>`;
 
@@ -337,9 +375,11 @@ router.get('/books', async (req, res) => {
   if (sourceFilter === 'weread')     filtered = dedupedBooks.filter(b => b.source === 'weread');
   if (sourceFilter === 'readwise')   filtered = dedupedBooks.filter(b => b.source === 'readwise');
   if (sourceFilter === 'appleBooks') filtered = dedupedBooks.filter(b => b.source === 'appleBooks');
+  if (sourceFilter === 'kb')         filtered = dedupedBooks.filter(b => b.hasKB);
 
   const totalFinished = dedupedBooks.filter(b => b.isFinished).length;
   const totalNotes    = dedupedBooks.reduce((s, b) => s + (b.noteCount || 0), 0);
+  const kbCount       = wereadBooks.filter(b => b.hasKB).length;
 
   // Source tabs
   const tabsHtml = [
@@ -347,6 +387,7 @@ router.get('/books', async (req, res) => {
     ['weread',     '微信读书',     wereadBooks.length],
     ['readwise',   'Readwise',     readwiseBooks.length],
     ['appleBooks', 'Apple Books',  appleBooks.length],
+    ['kb',         '✦ KB',         kbCount],
   ].map(([src, label, count]) =>
     `<a href="?src=${src}" class="lib-tab${sourceFilter === src ? ' active' : ''}">${label} <span class="lib-tab-count">${count}</span></a>`
   ).join('');
@@ -372,41 +413,7 @@ router.get('/books', async (req, res) => {
 // Backwards-compat redirects
 router.get('/library', (req, res) => res.redirect('/books'));
 
-// Individual book page at /reading/:slug
-router.get('/reading/:slug', async (req, res) => {
-  const { getAllBooks, getBook } = await import('../vault/loader.js');
-  const book = getBook('reading-' + req.params.slug) || getBook(req.params.slug);
-  if (!book) return res.status(404).send('Not found');
-
-  const html = renderMarkdown(book.body, book.filepath);
-  const m = book.meta;
-  const rows = [];
-  if (m.author)       rows.push(['Author', String(m.author)]);
-  if (m.progress)     rows.push(['Progress', String(m.progress)]);
-  if (m.readingTime || m.readingtime) rows.push(['Reading Time', String(m.readingTime || m.readingtime)]);
-  if (m.readingDate || m.readingdate) rows.push(['Started', String(m.readingDate || m.readingdate)]);
-  if (m.finishedDate || m.finisheddate) rows.push(['Finished', String(m.finishedDate || m.finisheddate)]);
-  if (m.isbn)         rows.push(['ISBN', String(m.isbn)]);
-  if (m.noteCount)    rows.push(['Highlights', `${m.noteCount}`]);
-  const cover = m.cover || '';
-  const coverRow = cover ? `<tr><td colspan="2" style="text-align:center;padding:.5rem"><img src="${cover}" alt="" style="max-width:140px;border-radius:4px"></td></tr>` : '';
-  const infobox = `<table class="article-infobox"><tbody>${coverRow}${rows.map(([k,v]) => `<tr><th>${k}</th><td>${v}</td></tr>`).join('')}</tbody></table>`;
-
-  res.send(await render('article.html', {
-    pageTitle:    `${book.title} — LLM KB`,
-    title:        book.title,
-    sectionLabel: '微信读书',
-    breadcrumb:   `<a href="/">Home</a> › <a href="/books">Books</a> › ${book.title}`,
-    infobox,
-    toc:          '',
-    content:      html,
-    backlinks:    '',
-    tagBadges:    '',
-    updatedAt:    String(m.lastReadDate || m.lastreaddate || ''),
-    hideFlipbook: true,
-    hideGraph:    true,
-    activeNav:    'books',
-  }));
-});
+// Old /reading/:slug → new /books/:slug detail page
+router.get('/reading/:slug', (req, res) => res.redirect(`/books/${req.params.slug}`));
 
 export default router;
