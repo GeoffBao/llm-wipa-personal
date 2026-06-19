@@ -16,9 +16,13 @@ const APPLE_BOOKS_SYNC_FILE = () => join(VAULT_PATH, 'Raw', 'apple-books-sync-da
 
 // ── KB index (books with generated knowledge bases) ────────────────────────────
 
-// Read WeRead bookmark/review counts from a KB dir's weread/ folder, if present.
-// Same source the /books/:slug detail page uses, so shelf counts stay consistent.
-function readKBWeReadCounts(dirPath) {
+// Display name for a KB dir = raw dir name minus the book-to-webpage ".kb" suffix.
+const kbDisplayName = dirName => dirName.replace(/\.kb$/, '');
+
+// Read WeRead metadata (counts + cover/author/title/progress) from a KB dir's
+// weread/ folder, if present. Same source the /books/:slug detail page uses, so
+// shelf counts and KB-only cards stay consistent with the detail hero.
+function readKBWeReadMeta(dirPath) {
   const wereadDir = join(dirPath, 'weread');
   if (!existsSync(wereadDir)) return null;
   const j = name => {
@@ -27,18 +31,26 @@ function readKBWeReadCounts(dirPath) {
   };
   const bmRaw      = j('my_bookmarks.json');
   const reviewsRaw = j('my_reviews.json');
-  if (!bmRaw && !reviewsRaw) return null;
-  const bookmarks = bmRaw ? (bmRaw.updated || bmRaw) : [];
-  const reviews   = reviewsRaw ? (reviewsRaw.reviews || reviewsRaw) : [];
+  const info       = j('book_info.json');
+  const progress   = j('progress.json');
+  if (!bmRaw && !reviewsRaw && !info) return null;
+  const bookmarks  = bmRaw ? (bmRaw.updated || bmRaw) : [];
+  const reviews    = reviewsRaw ? (reviewsRaw.reviews || reviewsRaw) : [];
+  const progressPct = progress?.book?.progress ?? null;
   return {
     noteCount:   Array.isArray(bookmarks) ? bookmarks.length : 0,
     reviewCount: Array.isArray(reviews)   ? reviews.length   : 0,
+    cover:       info?.cover  || '',
+    author:      info?.author || '',
+    title:       info?.title  || '',
+    progressPct,
+    isFinished:  progressPct != null ? progressPct >= 99 : false,
   };
 }
 
 function buildKBIndex() {
   const base = join(VAULT_PATH, 'AI-Generated', 'exports', 'books');
-  const entries = []; // [{ dirName, htmlFiles, wereadCounts }]
+  const entries = []; // [{ dirName, htmlFiles, weread }]
   if (!existsSync(base)) return entries;
   for (const entry of readdirSync(base, { withFileTypes: true })) {
     if (!entry.isDirectory()) continue;
@@ -47,7 +59,7 @@ function buildKBIndex() {
     entries.push({
       dirName: entry.name,
       htmlFiles,
-      wereadCounts: readKBWeReadCounts(dirPath),
+      weread: readKBWeReadMeta(dirPath),
     });
   }
   return entries;
@@ -68,6 +80,42 @@ export function invalidateKBIndex() {
 function findKBEntry(title) {
   const candidates = getKBIndex().map(e => ({ name: e.dirName, value: e }));
   return bestKBMatch(title, candidates);
+}
+
+// Generated KBs whose book is NOT already on the shelf (e.g. an epub-only book
+// never synced from WeRead). Surface them as first-class cards so a book-to-webpage
+// run never produces an orphaned KB reachable only by a raw /book-pages/ URL.
+function loadKBOnlyBooks(existingBooks) {
+  const idx = getKBIndex();
+  const dirCandidates = idx.map(e => ({ name: e.dirName, value: e.dirName }));
+  const claimed = new Set();
+  for (const b of existingBooks) {
+    const dir = bestKBMatch(b.title, dirCandidates);
+    if (dir) claimed.add(dir);
+  }
+  return idx
+    .filter(e => !claimed.has(e.dirName))
+    .map(e => {
+      const w = e.weread;
+      const title = (w && w.title) || kbDisplayName(e.dirName);
+      return {
+        id:           `kb-${e.dirName}`,
+        title,
+        author:       w?.author || '',
+        cover:        w?.cover  || '',
+        source:       w ? 'weread' : 'kb',
+        noteCount:    w?.noteCount   || 0,
+        reviewCount:  w?.reviewCount || 0,
+        readingTime:  '',
+        lastReadDate: '',
+        url:          `/books/${encodeURIComponent(kbDisplayName(e.dirName))}`,
+        isFinished:   w?.isFinished || false,
+        isLocal:      true,
+        hasKB:        true,
+        kbHtmlFiles:  e.htmlFiles,
+        kbOnly:       true,
+      };
+    });
 }
 
 function toDateStr(val) {
@@ -139,8 +187,8 @@ function loadWeReadBooks() {
       source:      'weread',
       // Prefer KB weread/ counts (same source as the detail page) so the shelf
       // card and detail hero never disagree; fall back to sync/vault metadata.
-      noteCount:   kbEntry?.wereadCounts?.noteCount   ?? sync?.noteCount   ?? (m.noteCount   || 0),
-      reviewCount: kbEntry?.wereadCounts?.reviewCount ?? sync?.reviewCount ?? (m.reviewCount || 0),
+      noteCount:   kbEntry?.weread?.noteCount   ?? sync?.noteCount   ?? (m.noteCount   || 0),
+      reviewCount: kbEntry?.weread?.reviewCount ?? sync?.reviewCount ?? (m.reviewCount || 0),
       readingTime: sync?.readingTime || String(m.readingTime || m.readingtime || ''),
       lastReadDate: sync?.lastReadDate || toDateStr(m.lastReadDate || m.lastreaddate || m.finishedDate || m.finisheddate || m.readingDate || m.readingdate || ''),
       url:         `/books/${slug}`,
@@ -384,11 +432,14 @@ router.get('/books', async (req, res) => {
   const wereadBooks  = loadWeReadBooks();
   const appleBooks   = loadAppleBooks();
 
-  const allBooks = [
+  const sourcedBooks = [
     ...wereadBooks.sort((a, b) => b.lastReadDate.localeCompare(a.lastReadDate)),
     ...readwiseBooks.sort((a, b) => b.lastReadDate.localeCompare(a.lastReadDate)),
     ...appleBooks.sort((a, b) => (b.lastReadDate || '').localeCompare(a.lastReadDate || '')),
   ];
+  // Generated KBs with no matching shelf book → surface as first-class cards.
+  const kbOnlyBooks = loadKBOnlyBooks(sourcedBooks);
+  const allBooks = [...sourcedBooks, ...kbOnlyBooks];
 
   // Dedup by normalized title (sources may overlap)
   const seen = new Set();
@@ -406,7 +457,7 @@ router.get('/books', async (req, res) => {
 
   const totalFinished = dedupedBooks.filter(b => b.isFinished).length;
   const totalNotes    = dedupedBooks.reduce((s, b) => s + (b.noteCount || 0), 0);
-  const kbCount       = wereadBooks.filter(b => b.hasKB).length;
+  const kbCount       = dedupedBooks.filter(b => b.hasKB).length;
 
   // Source tabs
   const tabsHtml = [

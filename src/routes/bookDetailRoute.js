@@ -16,7 +16,7 @@ import { marked }       from 'marked';
 import { getAllBooks, getBook } from '../vault/loader.js';
 import { renderMarkdown }      from '../render/markdown.js';
 import { render }              from '../render/template.js';
-import { bestKBMatch }         from '../books/kbMatch.js';
+import { bestKBMatch, normalizeTitle } from '../books/kbMatch.js';
 import { VAULT_PATH }          from '../../config.js';
 
 const router = Router();
@@ -48,13 +48,28 @@ function findKBForTitle(title) {
   const cheatsheetPath = join(dir, 'cheatsheet.md');
   const wereadDir     = join(dir, 'weread');
 
-  // Find HTML learning pages in this dir
-  const htmlFiles = existsSync(dir)
-    ? readdirSync(dir).filter(f => f.endsWith('.html')).map(f => ({
-        name: f.replace(/\.html$/, ''),
-        url:  `/book-pages/${encodeURIComponent(bestDir)}/${encodeURIComponent(f)}`,
-      }))
+  // Find HTML learning pages: those inside the KB dir (book-to-webpage copies a
+  // set there), plus any flat top-level "<书名>-<模式>.html" the skill writes to
+  // exports/books/ — so the entry cards don't depend on the copy step running.
+  const inDir = existsSync(dir)
+    ? readdirSync(dir).filter(f => f.endsWith('.html'))
     : [];
+  const inDirSet = new Set(inDir);
+  const dirTitleNorm = normalizeTitle(bestDir);
+  const topLevel = readdirSync(base).filter(f =>
+    f.endsWith('.html') && !inDirSet.has(f) &&
+    normalizeTitle(f.replace(/\.html$/, '')).startsWith(dirTitleNorm)
+  );
+  const htmlFiles = [
+    ...inDir.map(f => ({
+      name: f.replace(/\.html$/, ''),
+      url:  `/book-pages/${encodeURIComponent(bestDir)}/${encodeURIComponent(f)}`,
+    })),
+    ...topLevel.map(f => ({
+      name: f.replace(/\.html$/, ''),
+      url:  `/book-pages/${encodeURIComponent(f)}`,
+    })),
+  ];
 
   return {
     dir, bestDir,
@@ -384,21 +399,29 @@ router.get('/books/:slug', async (req, res) => {
   try {
   const slug = req.params.slug;
 
-  // Load vault book (WeRead markdown)
-  const book = getBook('reading-' + slug) || getBook(slug);
-  if (!book) {
-    // Fallback: try to find by title match across all weread books
-    const all = getAllBooks();
-    const found = all.find(b => b.slug === slug || b.slug === 'reading-' + slug);
-    if (!found) return res.status(404).send('Book not found');
-  }
-  const bk = book || (() => { const all = getAllBooks(); return all.find(b => b.slug === slug || b.slug === 'reading-' + slug); })();
+  // Load vault book (WeRead markdown); fall back to a title match across books.
+  const book = getBook('reading-' + slug) || getBook(slug)
+    || getAllBooks().find(b => b.slug === slug || b.slug === 'reading-' + slug);
 
-  // KB discovery
-  const kb = findKBForTitle(bk.title);
+  // KB discovery — match by the vault book title, or by the slug itself for a
+  // KB-only book (a generated KB with no corresponding WeRead vault markdown).
+  const kb = findKBForTitle(book ? book.title : slug);
+
+  if (!book && !kb) return res.status(404).send('Book not found');
 
   // WeRead data (from KB weread/ or from weread-sync-data.json)
   const weread = kb ? loadWeReadData(kb.wereadDir) : null;
+
+  // Synthesize a book object for KB-only books so the hero/tabs render.
+  const bk = book || {
+    title:      weread?.bookInfo?.title || kb.bestDir.replace(/\.kb$/, ''),
+    author:     weread?.bookInfo?.author || '',
+    body:       '',
+    filepath:   null,
+    cover:      weread?.cover || '',
+    isFinished: (weread?.progressPct ?? 0) >= 99,
+    meta:       {},
+  };
 
   // Load KB content
   let indexMd    = null;
