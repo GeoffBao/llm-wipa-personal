@@ -156,7 +156,10 @@
       if (!href || href.startsWith('#') || href.startsWith('http') || href.startsWith('mailto:')) return;
       if (a.closest('.notebook-scribble-btn') || a.closest('.notebook-card')) return;
       e.preventDefault();
-      const url = href.startsWith('/') ? href : new URL(href, window.location.origin).pathname;
+      // Resolve against the current URL and keep the query string, so e.g.
+      // "?src=kb" on /books → "/books?src=kb" (not "/" via origin + pathname-only).
+      const resolved = new URL(href, window.location.href);
+      const url = resolved.pathname + resolved.search;
       let tabs = loadTabs();
       if (!tabs.find(t => t.url === url)) {
         tabs.push({ id: Date.now().toString(36), url, title: a.textContent?.trim() || tabTitleFromPath(url) });

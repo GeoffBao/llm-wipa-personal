@@ -270,7 +270,7 @@ function buildGlossaryTab(glossaryMd) {
 
   return `
     <div class="bkd-glossary-search-wrap">
-      <input type="search" id="bkd-glossary-search" class="bkd-search-input" placeholder="搜索术语…" oninput="filterGlossary(this.value)">
+      <input type="search" id="bkd-glossary-search" class="bkd-search-input" placeholder="搜索术语…">
     </div>
     <div class="bkd-glossary-grid" id="bkd-glossary-grid">
       ${terms.map(t => `
@@ -348,7 +348,9 @@ function buildHighlightsTab(weread) {
 // ── Hero HTML ─────────────────────────────────────────────────────────────────
 
 function buildHero(book, weread, kb) {
-  const cover = (weread?.cover || book.cover || '');
+  // Vault WeRead books keep the cover URL in meta.cover; KB-only books set .cover.
+  const metaCover = book.meta?.cover instanceof Date ? '' : (book.meta?.cover || '');
+  const cover = (weread?.cover || book.cover || metaCover || '');
   const coverHtml = cover
     ? `<img src="${escHtml(cover)}" alt="" class="bkd-cover-img" loading="lazy">`
     : `<div class="bkd-cover-ph">${escHtml(book.title.slice(0, 2))}</div>`;
@@ -395,7 +397,7 @@ function buildLearnBtns(htmlFiles) {
       <div class="bkd-learn-label">交互学习页</div>
       <div class="bkd-learn-cards">
         ${htmlFiles.map(h => `
-          <button class="bkd-learn-card" onclick="openBookOverlay('${escHtml(h.url)}', '${escHtml(h.name).replace(/'/g, "\\'")}')">
+          <button type="button" class="bkd-learn-card" data-url="${escHtml(h.url)}" data-name="${escHtml(h.name)}">
             <span class="bkd-learn-card-icon">📖</span>
             <span class="bkd-learn-card-text">
               <span class="bkd-learn-card-name">${escHtml(h.name)}</span>
@@ -482,9 +484,8 @@ router.get('/books/:slug', async (req, res) => {
   const defaultTab = tabsConfig.length ? tabsConfig[0].id : 'notes';
 
   const tabBtnsHtml = tabsConfig.map((t, i) => `
-    <button class="bkd-tab-btn${i === 0 ? ' active' : ''}"
-            data-tab="${t.id}"
-            onclick="switchBkdTab('${t.id}', this)">${t.label}</button>`
+    <button type="button" class="bkd-tab-btn${i === 0 ? ' active' : ''}"
+            data-tab="${t.id}">${t.label}</button>`
   ).join('');
 
   const tabPanelsHtml = tabsConfig.map((t, i) => `
@@ -507,131 +508,7 @@ router.get('/books/:slug', async (req, res) => {
     <div class="bkd-tab-bar">${tabBtnsHtml}</div>
     <div class="bkd-tab-panels">${tabPanelsHtml}</div>
   </div>` : `<div class="bkd-panel active">${vaultNotesHtml}</div>`}
-</div>
-
-<!-- Full-screen overlay for interactive learning pages -->
-<div id="book-overlay" class="book-overlay" hidden>
-  <div class="book-overlay-bar">
-    <button class="book-overlay-back" onclick="closeBookOverlay()">← 返回</button>
-    <span id="book-overlay-title" class="book-overlay-title"></span>
-    <a id="book-overlay-ext" href="#" target="_blank" rel="noopener" class="book-overlay-ext">↗ 新标签</a>
-  </div>
-  <div id="book-overlay-loading" class="book-overlay-loading" hidden>
-    <div class="book-overlay-spinner"></div>
-    <span>加载中…</span>
-  </div>
-  <iframe id="book-overlay-frame" class="book-overlay-frame" src="" title="交互学习页"></iframe>
-</div>
-
-<script>
-(function () {
-  // ── Move overlay to <body> so position:fixed covers the full viewport ───────
-  // (inside .main-content it gets trapped to the content box — header/sidebar
-  //  stay visible & clickable; same gotcha as the body-level loop modal)
-  var _overlayEl = document.getElementById('book-overlay');
-  if (_overlayEl && _overlayEl.parentElement !== document.body) {
-    document.body.appendChild(_overlayEl);
-  }
-
-  // ── WeRead links: weread:// only resolves with the app (mobile). On desktop,
-  //    point them at the WeRead web search by title so the click isn't a dead end.
-  (function () {
-    var isMobile = /Android|iPhone|iPad|iPod|HarmonyOS/i.test(navigator.userAgent);
-    if (isMobile) return;
-    document.querySelectorAll('.bkd-wr-link[data-wr-title]').forEach(function (a) {
-      var title = a.getAttribute('data-wr-title');
-      if (!title) return;
-      a.href = 'https://weread.qq.com/web/search/global?keyword=' + encodeURIComponent(title);
-      a.target = '_blank';
-      a.rel = 'noopener';
-      a.textContent = '在微信读书网页版查找 →';
-    });
-  })();
-
-  // ── Tab switching ──────────────────────────────────────────────────────────
-  window.switchBkdTab = function (id, btn) {
-    document.querySelectorAll('.bkd-tab-btn').forEach(function (b) { b.classList.remove('active'); });
-    document.querySelectorAll('.bkd-panel').forEach(function (p) { p.classList.remove('active'); });
-    if (btn) btn.classList.add('active');
-    var panel = document.getElementById('bkd-panel-' + id);
-    if (panel) panel.classList.add('active');
-  };
-
-  // ── Glossary search ────────────────────────────────────────────────────────
-  window.filterGlossary = function (q) {
-    var terms = document.querySelectorAll('.bkd-term');
-    var lower = q.toLowerCase();
-    terms.forEach(function (el) {
-      var matches = !lower || el.dataset.term.includes(lower);
-      el.style.display = matches ? '' : 'none';
-    });
-  };
-
-  // ── Full-screen overlay ───────────────────────────────────────────────────
-  // Visually hide the overlay (no history side-effects). Used by both the
-  // close button/ESC path and the popstate (Back button) path.
-  function hideBookOverlay() {
-    var overlay = document.getElementById('book-overlay');
-    var frame   = document.getElementById('book-overlay-frame');
-    if (!overlay || overlay.hidden) return;
-    overlay.classList.remove('book-overlay--visible');
-    document.body.style.overflow = '';
-    setTimeout(function () {
-      overlay.hidden = true;
-      if (frame) frame.src = '';
-    }, 280);
-  }
-
-  window.openBookOverlay = function (url, name) {
-    var overlay = document.getElementById('book-overlay');
-    var frame   = document.getElementById('book-overlay-frame');
-    var extLink = document.getElementById('book-overlay-ext');
-    var title   = document.getElementById('book-overlay-title');
-    if (!overlay || !frame) return;
-    var wasHidden = overlay.hidden;
-    var loading = document.getElementById('book-overlay-loading');
-    if (loading) loading.hidden = false;
-    frame.src  = url;
-    extLink.href = url;
-    title.textContent = name || document.title.replace(' — LLM KB', '');
-    overlay.hidden = false;
-    requestAnimationFrame(function () { overlay.classList.add('book-overlay--visible'); });
-    document.body.style.overflow = 'hidden';
-    // Push a history entry so the browser / phone Back button closes the
-    // overlay instead of navigating away from the book page.
-    if (wasHidden) history.pushState({ bookOverlay: true }, '');
-  };
-
-  window.closeBookOverlay = function () {
-    var overlay = document.getElementById('book-overlay');
-    if (!overlay || overlay.hidden) return;
-    // If we pushed an overlay history entry, pop it — the popstate handler
-    // performs the actual hide. Otherwise hide directly.
-    if (history.state && history.state.bookOverlay) {
-      history.back();
-    } else {
-      hideBookOverlay();
-    }
-  };
-
-  // Hide the loading indicator once the learning page finishes loading.
-  (function () {
-    var frame = document.getElementById('book-overlay-frame');
-    if (frame) frame.addEventListener('load', function () {
-      if (!frame.src) return; // ignore the reset to '' on close
-      var loading = document.getElementById('book-overlay-loading');
-      if (loading) loading.hidden = true;
-    });
-  })();
-
-  // Back button (or closeBookOverlay's history.back()) → close the overlay.
-  window.addEventListener('popstate', function () { hideBookOverlay(); });
-
-  document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape') window.closeBookOverlay();
-  });
-})();
-</script>`;
+</div>`;
 
   res.send(await render('book-detail.html', {
     pageTitle:  `${bk.title} — LLM KB`,

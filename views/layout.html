@@ -211,6 +211,21 @@
     </div>
   </div>
 
+  <!-- Book learning-page overlay (body-level so position:fixed covers the viewport;
+       driven by /public/js/book-detail.js via event delegation) -->
+  <div id="book-overlay" class="book-overlay" hidden>
+    <div class="book-overlay-bar">
+      <button class="book-overlay-back" type="button">← 返回</button>
+      <span id="book-overlay-title" class="book-overlay-title"></span>
+      <a id="book-overlay-ext" href="#" target="_blank" rel="noopener" class="book-overlay-ext">↗ 新标签</a>
+    </div>
+    <div id="book-overlay-loading" class="book-overlay-loading" hidden>
+      <div class="book-overlay-spinner"></div>
+      <span>加载中…</span>
+    </div>
+    <iframe id="book-overlay-frame" class="book-overlay-frame" src="" title="交互学习页"></iframe>
+  </div>
+
   <footer class="site-footer">
     <div class="footer-inner">
       <img src="/public/favicon.svg" width="16" height="16" alt="" style="opacity:.5">
@@ -229,6 +244,7 @@
   <script src="/public/js/mobile-nav.js" defer></script>
   <script src="/public/js/palette.js" defer></script>
   <script src="/public/js/workspace.js" defer></script>
+  <script src="/public/js/book-detail.js" defer></script>
   <script src="/public/js/browse-sort.js" defer></script>
   <script src="/public/js/split-pane.js" defer></script>
   <script src="/public/js/notebook-cover.js" defer></script>
