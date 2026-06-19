@@ -158,9 +158,20 @@ function loadChapters(chaptersDir) {
 
 // ── HTML renderers ─────────────────────────────────────────────────────────────
 
+// Lightweight, dependency-free sanitizer for marked() output. KB markdown is
+// locally generated (book-to-webpage), but it may contain raw inline HTML, so
+// strip executable/embedding vectors before injecting into the page.
+function sanitizeHtml(html) {
+  return String(html || '')
+    .replace(/<\s*(script|style|iframe|object|embed|link|meta|base)\b[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi, '')
+    .replace(/<\s*(script|style|iframe|object|embed|link|meta|base)\b[^>]*\/?>/gi, '')
+    .replace(/\son\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
+    .replace(/(href|src)\s*=\s*("\s*javascript:[^"]*"|'\s*javascript:[^']*')/gi, '$1="#"');
+}
+
 function mdToHtml(text) {
   if (!text) return '';
-  return marked.parse(text);
+  return sanitizeHtml(marked.parse(text));
 }
 
 function escHtml(s) {
@@ -285,12 +296,15 @@ function buildHighlightsTab(weread) {
   }
 
   const bookId = weread.bookId;
+  const wrTitle = weread.bookInfo?.title || '';
 
   // Merge bookmarks + reviews by chapter for a timeline feel
   const bmHtml = weread.bookmarks.slice(0, 60).map(bm => {
     const review = weread.reviews.find(r => r.abstract === bm.markText && r.content);
+    // weread:// only resolves with the app installed; the bind script rewrites
+    // these to a WeRead web search on desktop (see initWeReadLinks).
     const deepLink = bookId && bm.chapterUid
-      ? `<a href="weread://reading?bId=${bookId}&chapterUid=${bm.chapterUid}" class="bkd-wr-link">在微信读书中打开 →</a>`
+      ? `<a href="weread://reading?bId=${bookId}&chapterUid=${bm.chapterUid}" class="bkd-wr-link" data-wr-title="${escHtml(wrTitle)}">在微信读书中打开 →</a>`
       : '';
     return `
       <div class="bkd-highlight">
@@ -518,6 +532,21 @@ router.get('/books/:slug', async (req, res) => {
   if (_overlayEl && _overlayEl.parentElement !== document.body) {
     document.body.appendChild(_overlayEl);
   }
+
+  // ── WeRead links: weread:// only resolves with the app (mobile). On desktop,
+  //    point them at the WeRead web search by title so the click isn't a dead end.
+  (function () {
+    var isMobile = /Android|iPhone|iPad|iPod|HarmonyOS/i.test(navigator.userAgent);
+    if (isMobile) return;
+    document.querySelectorAll('.bkd-wr-link[data-wr-title]').forEach(function (a) {
+      var title = a.getAttribute('data-wr-title');
+      if (!title) return;
+      a.href = 'https://weread.qq.com/web/search/global?keyword=' + encodeURIComponent(title);
+      a.target = '_blank';
+      a.rel = 'noopener';
+      a.textContent = '在微信读书网页版查找 →';
+    });
+  })();
 
   // ── Tab switching ──────────────────────────────────────────────────────────
   window.switchBkdTab = function (id, btn) {
