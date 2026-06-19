@@ -14,7 +14,7 @@ import searchRouter from './src/routes/search.js';
 import browseRouter from './src/routes/browse.js';
 import apiRouter from './src/routes/api.js';
 import readingRouter from './src/routes/reading.js';
-import libraryRouter from './src/routes/libraryRoute.js';
+import libraryRouter, { invalidateKBIndex } from './src/routes/libraryRoute.js';
 import graphRouter from './src/routes/graph.js';
 import canvasRouter from './src/routes/canvasRoute.js';
 import { loadCanvases } from './src/vault/canvas.js';
@@ -142,6 +142,16 @@ async function start() {
     .on('all', () => {
       clearTimeout(canvasTimer);
       canvasTimer = setTimeout(() => loadCanvases().then(() => { buildDiagramsIndex(); console.log('[watcher] Canvases reloaded'); }), 300);
+    });
+
+  // Watch generated book KBs (book-to-webpage output) — invalidate the cached
+  // KB index so the /books shelf picks up new books without a server restart.
+  let kbTimer = null;
+  const booksExportDir = join(VAULT_PATH, 'AI-Generated', 'exports', 'books');
+  chokidar.watch(booksExportDir, { ignoreInitial: true, depth: 2, awaitWriteFinish: { stabilityThreshold: 500, pollInterval: 100 } })
+    .on('all', () => {
+      clearTimeout(kbTimer);
+      kbTimer = setTimeout(() => { invalidateKBIndex(); console.log('[watcher] KB index invalidated'); }, 400);
     });
 
   let vizTimer = null;

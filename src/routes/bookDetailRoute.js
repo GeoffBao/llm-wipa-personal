@@ -355,17 +355,26 @@ function buildHero(book, weread, kb) {
   </div>`;
 }
 
-// ── HTML files list (overlay launchers) ───────────────────────────────────────
+// ── Interactive learning pages — prominent entry cards (overlay launchers) ────
+// The full-screen page has its own internal tabs, so it lives as a distinct
+// "enter immersive view" card rather than competing with the site tabs below.
 
 function buildLearnBtns(htmlFiles) {
   if (!htmlFiles || !htmlFiles.length) return '';
   return `
-    <div class="bkd-learn-bar">
-      <span class="bkd-learn-label">交互学习页</span>
-      ${htmlFiles.map(h => `
-        <button class="bkd-learn-btn" onclick="openBookOverlay('${escHtml(h.url)}', '${escHtml(h.name).replace(/'/g, "\\'")}')">
-          📖 ${escHtml(h.name)}
-        </button>`).join('')}
+    <div class="bkd-learn-section">
+      <div class="bkd-learn-label">交互学习页</div>
+      <div class="bkd-learn-cards">
+        ${htmlFiles.map(h => `
+          <button class="bkd-learn-card" onclick="openBookOverlay('${escHtml(h.url)}', '${escHtml(h.name).replace(/'/g, "\\'")}')">
+            <span class="bkd-learn-card-icon">📖</span>
+            <span class="bkd-learn-card-text">
+              <span class="bkd-learn-card-name">${escHtml(h.name)}</span>
+              <span class="bkd-learn-card-sub">全屏沉浸式学习</span>
+            </span>
+            <span class="bkd-learn-card-arrow">→</span>
+          </button>`).join('')}
+      </div>
     </div>`;
 }
 

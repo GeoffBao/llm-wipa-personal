@@ -8,8 +8,11 @@
  */
 
 // Strip punctuation / brackets / spaces so "黄仁勋：英伟达之芯" == "黄仁勋-英伟达之芯".
+// Also drop the book-to-webpage ".kb" directory suffix so "<书名>.kb" matches "<书名>".
 export function normalizeTitle(s) {
-  return String(s || '').toLowerCase().replace(/[：:《》\s「」【】\-_·]/g, '').trim();
+  return String(s || '').toLowerCase()
+    .replace(/\.kb$/, '')
+    .replace(/[：:《》\s「」【】\-_·]/g, '').trim();
 }
 
 // Minimum overlap ratio (shorter / longer) for a containment match to count.

@@ -59,6 +59,12 @@ function getKBIndex() {
   return _kbIndex;
 }
 
+// Drop the cached KB index so the next /books request re-scans exports/books/.
+// Called by the server watcher when a book-to-webpage run adds/changes a KB dir.
+export function invalidateKBIndex() {
+  _kbIndex = null;
+}
+
 function findKBEntry(title) {
   const candidates = getKBIndex().map(e => ({ name: e.dirName, value: e }));
   return bestKBMatch(title, candidates);
