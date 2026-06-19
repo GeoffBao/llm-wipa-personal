@@ -5,6 +5,7 @@ import { join } from 'path';
 import { getAllBooks } from '../vault/loader.js';
 import { renderMarkdown } from '../render/markdown.js';
 import { render } from '../render/template.js';
+import { bestKBMatch } from '../books/kbMatch.js';
 import { VAULT_PATH } from '../../config.js';
 
 const router = Router();
@@ -37,20 +38,19 @@ function readKBWeReadCounts(dirPath) {
 
 function buildKBIndex() {
   const base = join(VAULT_PATH, 'AI-Generated', 'exports', 'books');
-  const index = new Map(); // normalizedTitle → { dirName, htmlFiles, wereadCounts }
-  if (!existsSync(base)) return index;
-  const normalize = s => s.toLowerCase().replace(/[：:《》\s「」【】\-_·]/g, '').trim();
+  const entries = []; // [{ dirName, htmlFiles, wereadCounts }]
+  if (!existsSync(base)) return entries;
   for (const entry of readdirSync(base, { withFileTypes: true })) {
     if (!entry.isDirectory()) continue;
     const dirPath = join(base, entry.name);
     const htmlFiles = readdirSync(dirPath).filter(f => f.endsWith('.html'));
-    index.set(normalize(entry.name), {
+    entries.push({
       dirName: entry.name,
       htmlFiles,
       wereadCounts: readKBWeReadCounts(dirPath),
     });
   }
-  return index;
+  return entries;
 }
 
 let _kbIndex = null;
@@ -60,13 +60,8 @@ function getKBIndex() {
 }
 
 function findKBEntry(title) {
-  const idx = getKBIndex();
-  const normalize = s => s.toLowerCase().replace(/[：:《》\s「」【】\-_·]/g, '').trim();
-  const want = normalize(title);
-  for (const [key, val] of idx.entries()) {
-    if (key.includes(want) || want.includes(key)) return val;
-  }
-  return null;
+  const candidates = getKBIndex().map(e => ({ name: e.dirName, value: e }));
+  return bestKBMatch(title, candidates);
 }
 
 function toDateStr(val) {

@@ -16,6 +16,7 @@ import { marked }       from 'marked';
 import { getAllBooks, getBook } from '../vault/loader.js';
 import { renderMarkdown }      from '../render/markdown.js';
 import { render }              from '../render/template.js';
+import { bestKBMatch }         from '../books/kbMatch.js';
 import { VAULT_PATH }          from '../../config.js';
 
 const router = Router();
@@ -33,17 +34,10 @@ function findKBForTitle(title) {
   const base = BOOKS_EXPORT();
   if (!existsSync(base)) return null;
 
-  const normalize = s => s.toLowerCase().replace(/[：:《》\s「」【】\-_·]/g, '').trim();
-  const want = normalize(title);
-
-  let bestDir = null;
-  for (const entry of readdirSync(base, { withFileTypes: true })) {
-    if (!entry.isDirectory()) continue;
-    if (normalize(entry.name).includes(want) || want.includes(normalize(entry.name))) {
-      bestDir = entry.name;
-      break;
-    }
-  }
+  const dirs = readdirSync(base, { withFileTypes: true })
+    .filter(e => e.isDirectory())
+    .map(e => ({ name: e.name, value: e.name }));
+  const bestDir = bestKBMatch(title, dirs);
   if (!bestDir) return null;
 
   const dir     = join(base, bestDir);
@@ -476,6 +470,10 @@ router.get('/books/:slug', async (req, res) => {
     <span id="book-overlay-title" class="book-overlay-title"></span>
     <a id="book-overlay-ext" href="#" target="_blank" rel="noopener" class="book-overlay-ext">↗ 新标签</a>
   </div>
+  <div id="book-overlay-loading" class="book-overlay-loading" hidden>
+    <div class="book-overlay-spinner"></div>
+    <span>加载中…</span>
+  </div>
   <iframe id="book-overlay-frame" class="book-overlay-frame" src="" title="交互学习页"></iframe>
 </div>
 
@@ -530,6 +528,8 @@ router.get('/books/:slug', async (req, res) => {
     var title   = document.getElementById('book-overlay-title');
     if (!overlay || !frame) return;
     var wasHidden = overlay.hidden;
+    var loading = document.getElementById('book-overlay-loading');
+    if (loading) loading.hidden = false;
     frame.src  = url;
     extLink.href = url;
     title.textContent = name || document.title.replace(' — LLM KB', '');
@@ -552,6 +552,16 @@ router.get('/books/:slug', async (req, res) => {
       hideBookOverlay();
     }
   };
+
+  // Hide the loading indicator once the learning page finishes loading.
+  (function () {
+    var frame = document.getElementById('book-overlay-frame');
+    if (frame) frame.addEventListener('load', function () {
+      if (!frame.src) return; // ignore the reset to '' on close
+      var loading = document.getElementById('book-overlay-loading');
+      if (loading) loading.hidden = true;
+    });
+  })();
 
   // Back button (or closeBookOverlay's history.back()) → close the overlay.
   window.addEventListener('popstate', function () { hideBookOverlay(); });
