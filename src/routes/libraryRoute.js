@@ -15,16 +15,40 @@ const APPLE_BOOKS_SYNC_FILE = () => join(VAULT_PATH, 'Raw', 'apple-books-sync-da
 
 // ── KB index (books with generated knowledge bases) ────────────────────────────
 
+// Read WeRead bookmark/review counts from a KB dir's weread/ folder, if present.
+// Same source the /books/:slug detail page uses, so shelf counts stay consistent.
+function readKBWeReadCounts(dirPath) {
+  const wereadDir = join(dirPath, 'weread');
+  if (!existsSync(wereadDir)) return null;
+  const j = name => {
+    try { return JSON.parse(readFileSync(join(wereadDir, name), 'utf8')); }
+    catch { return null; }
+  };
+  const bmRaw      = j('my_bookmarks.json');
+  const reviewsRaw = j('my_reviews.json');
+  if (!bmRaw && !reviewsRaw) return null;
+  const bookmarks = bmRaw ? (bmRaw.updated || bmRaw) : [];
+  const reviews   = reviewsRaw ? (reviewsRaw.reviews || reviewsRaw) : [];
+  return {
+    noteCount:   Array.isArray(bookmarks) ? bookmarks.length : 0,
+    reviewCount: Array.isArray(reviews)   ? reviews.length   : 0,
+  };
+}
+
 function buildKBIndex() {
   const base = join(VAULT_PATH, 'AI-Generated', 'exports', 'books');
-  const index = new Map(); // normalizedTitle → { dirName, htmlFiles }
+  const index = new Map(); // normalizedTitle → { dirName, htmlFiles, wereadCounts }
   if (!existsSync(base)) return index;
   const normalize = s => s.toLowerCase().replace(/[：:《》\s「」【】\-_·]/g, '').trim();
   for (const entry of readdirSync(base, { withFileTypes: true })) {
     if (!entry.isDirectory()) continue;
     const dirPath = join(base, entry.name);
     const htmlFiles = readdirSync(dirPath).filter(f => f.endsWith('.html'));
-    index.set(normalize(entry.name), { dirName: entry.name, htmlFiles });
+    index.set(normalize(entry.name), {
+      dirName: entry.name,
+      htmlFiles,
+      wereadCounts: readKBWeReadCounts(dirPath),
+    });
   }
   return index;
 }
@@ -112,8 +136,10 @@ function loadWeReadBooks() {
       cover:       (m.cover instanceof Date ? '' : String(m.cover || '')) || sync?.cover || '',
       progressPct: sync ? (sync.progress || progressPct) : progressPct,
       source:      'weread',
-      noteCount:   sync?.noteCount  ?? (m.noteCount  || 0),
-      reviewCount: sync?.reviewCount ?? (m.reviewCount || 0),
+      // Prefer KB weread/ counts (same source as the detail page) so the shelf
+      // card and detail hero never disagree; fall back to sync/vault metadata.
+      noteCount:   kbEntry?.wereadCounts?.noteCount   ?? sync?.noteCount   ?? (m.noteCount   || 0),
+      reviewCount: kbEntry?.wereadCounts?.reviewCount ?? sync?.reviewCount ?? (m.reviewCount || 0),
       readingTime: sync?.readingTime || String(m.readingTime || m.readingtime || ''),
       lastReadDate: sync?.lastReadDate || toDateStr(m.lastReadDate || m.lastreaddate || m.finishedDate || m.finisheddate || m.readingDate || m.readingdate || ''),
       url:         `/books/${slug}`,

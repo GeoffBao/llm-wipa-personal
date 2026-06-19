@@ -369,7 +369,7 @@ function buildLearnBtns(htmlFiles) {
     <div class="bkd-learn-bar">
       <span class="bkd-learn-label">交互学习页</span>
       ${htmlFiles.map(h => `
-        <button class="bkd-learn-btn" onclick="openBookOverlay('${escHtml(h.url)}')">
+        <button class="bkd-learn-btn" onclick="openBookOverlay('${escHtml(h.url)}', '${escHtml(h.name).replace(/'/g, "\\'")}')">
           📖 ${escHtml(h.name)}
         </button>`).join('')}
     </div>`;
@@ -429,7 +429,7 @@ router.get('/books/:slug', async (req, res) => {
   const hasVaultNotes   = !!(bk.body && bk.body.trim().length > 10);
 
   const tabsConfig = [
-    { id: 'overview',   label: '📋 概述',   content: tabOverview,   show: showKbTabs },
+    { id: 'overview',   label: '📋 概述',   content: tabOverview,   show: showKbTabs && !!indexMd },
     { id: 'chapters',   label: '📚 章节',   content: tabChapters,   show: showKbTabs && chapters.length > 0 },
     { id: 'glossary',   label: '📖 词汇',   content: tabGlossary,   show: showKbTabs && !!glossaryMd },
     { id: 'patterns',   label: '🔧 模式',   content: tabPatterns,   show: showKbTabs && !!patternsMd },
@@ -481,6 +481,14 @@ router.get('/books/:slug', async (req, res) => {
 
 <script>
 (function () {
+  // ── Move overlay to <body> so position:fixed covers the full viewport ───────
+  // (inside .main-content it gets trapped to the content box — header/sidebar
+  //  stay visible & clickable; same gotcha as the body-level loop modal)
+  var _overlayEl = document.getElementById('book-overlay');
+  if (_overlayEl && _overlayEl.parentElement !== document.body) {
+    document.body.appendChild(_overlayEl);
+  }
+
   // ── Tab switching ──────────────────────────────────────────────────────────
   window.switchBkdTab = function (id, btn) {
     document.querySelectorAll('.bkd-tab-btn').forEach(function (b) { b.classList.remove('active'); });
@@ -501,31 +509,52 @@ router.get('/books/:slug', async (req, res) => {
   };
 
   // ── Full-screen overlay ───────────────────────────────────────────────────
-  window.openBookOverlay = function (url) {
+  // Visually hide the overlay (no history side-effects). Used by both the
+  // close button/ESC path and the popstate (Back button) path.
+  function hideBookOverlay() {
     var overlay = document.getElementById('book-overlay');
     var frame   = document.getElementById('book-overlay-frame');
-    var extLink = document.getElementById('book-overlay-ext');
-    var title   = document.getElementById('book-overlay-title');
-    if (!overlay || !frame) return;
-    frame.src  = url;
-    extLink.href = url;
-    title.textContent = document.title.replace(' — LLM KB', '');
-    overlay.hidden = false;
-    requestAnimationFrame(function () { overlay.classList.add('book-overlay--visible'); });
-    document.body.style.overflow = 'hidden';
-  };
-
-  window.closeBookOverlay = function () {
-    var overlay = document.getElementById('book-overlay');
-    var frame   = document.getElementById('book-overlay-frame');
-    if (!overlay) return;
+    if (!overlay || overlay.hidden) return;
     overlay.classList.remove('book-overlay--visible');
     document.body.style.overflow = '';
     setTimeout(function () {
       overlay.hidden = true;
       if (frame) frame.src = '';
     }, 280);
+  }
+
+  window.openBookOverlay = function (url, name) {
+    var overlay = document.getElementById('book-overlay');
+    var frame   = document.getElementById('book-overlay-frame');
+    var extLink = document.getElementById('book-overlay-ext');
+    var title   = document.getElementById('book-overlay-title');
+    if (!overlay || !frame) return;
+    var wasHidden = overlay.hidden;
+    frame.src  = url;
+    extLink.href = url;
+    title.textContent = name || document.title.replace(' — LLM KB', '');
+    overlay.hidden = false;
+    requestAnimationFrame(function () { overlay.classList.add('book-overlay--visible'); });
+    document.body.style.overflow = 'hidden';
+    // Push a history entry so the browser / phone Back button closes the
+    // overlay instead of navigating away from the book page.
+    if (wasHidden) history.pushState({ bookOverlay: true }, '');
   };
+
+  window.closeBookOverlay = function () {
+    var overlay = document.getElementById('book-overlay');
+    if (!overlay || overlay.hidden) return;
+    // If we pushed an overlay history entry, pop it — the popstate handler
+    // performs the actual hide. Otherwise hide directly.
+    if (history.state && history.state.bookOverlay) {
+      history.back();
+    } else {
+      hideBookOverlay();
+    }
+  };
+
+  // Back button (or closeBookOverlay's history.back()) → close the overlay.
+  window.addEventListener('popstate', function () { hideBookOverlay(); });
 
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') window.closeBookOverlay();
