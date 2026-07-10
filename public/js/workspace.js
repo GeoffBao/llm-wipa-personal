@@ -130,10 +130,9 @@
   }
 
   function bindEvents() {
+    // The visible tabs UI is optional; SPA nav below must bind regardless.
     const container = document.getElementById('workspace-tabs');
-    if (!container) return;
-
-    container.addEventListener('click', (e) => {
+    container?.addEventListener('click', (e) => {
       const closeEl = e.target.closest('.workspace-tab-close');
       if (closeEl) {
         e.stopPropagation();

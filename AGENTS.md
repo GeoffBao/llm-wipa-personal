@@ -17,15 +17,17 @@ When working on this project, always keep this philosophy in mind. Features that
 - For UI work, self-test the actual page across the active theme and relevant responsive widths, then iterate on visible failures; screenshots from the user should trigger direct debugging and reassessment, not another abstract plan.
 - When the user provides Obsidian plugin or app screenshots as UI reference, implement to match that layout and styling directly.
 - The product direction is Surf (deta/surf)-inspired UI/UX via phased adoption—visual theme, vertical tabs, split panes, macOS Electron shell—keeping the Obsidian vault as data source rather than forking Surf.
+- On sidebar collapse, prefer layout C: card/list pages fill width; home, article, and Journey reading pages keep max-width and center; hero KB×Agent loop visibility must not depend on sidebar width.
 
 ## Learned Workspace Facts
 - This workspace is LLM WIPA, a local Express and vanilla JavaScript app that serves an Obsidian vault as a Wikipedia-style knowledge base from vault markdown.
 - The project includes a local `/flipbook/:slug` Flipbook view that renders a flipbook.page-style visual browser from vault graph data using local SVG/canvas-style frames, with no image model required in the base path.
+- Vault `Visualizations/` HTML files (daily AI-generated) are served at `/visualizations` with a gallery and iframe viewer (`/visualizations/:slug`, `/visualizations/:slug/raw`).
 - Homepage `Topic Areas` are configured in `config.js` via `DOMAIN_PORTALS`, while sidebar topic links live in `views/layout.html`; portal matching scans `concepts`/`sources` titles and frontmatter tags, not full body text.
 - Wikilink rendering resolves targets in `src/vault/wikilinks.js`; missing targets render as red `wikilink-missing` links and resolution falls back through title, case-insensitive title, slug, and normalized punctuation matching.
-- The unified reading page is `/books` (formerly Library); `/library` and `/reading` redirect there, with year-grouped shelf cards aggregating WeRead vault markdown and Readwise epub data.
-- Books heatmap activity counts WeRead highlight timestamps (`⏱ YYYY-MM-DD`), Readwise epub `updatedAt`, and `lastReadDate` fallback—not `lastReadDate` alone.
+- The unified reading page is `/books` (formerly Library); `/library` and `/reading` redirect there, with year-grouped shelf cards aggregating WeRead vault markdown and Readwise epub data. Heatmap activity counts WeRead highlight timestamps (`⏱ YYYY-MM-DD`), Readwise epub `updatedAt`, and `lastReadDate` fallback—not `lastReadDate` alone.
 - Mermaid fenced blocks (` ```mermaid ` or `mmd`) render as client-side diagrams via bundled `mermaid.js`; `src/render/markdown.js` outputs `.mermaid-wrap` + `.mermaid` DOM instead of hljs code blocks.
+- Excalidraw pasted images live in the drawing `files` map (base64 `dataURL`s referenced by `fileId`); load/save, viewer, and gallery thumbnails must include `files` or images show as gray placeholders.
 - `/api/chat` RAG uses three-source retrieval: (R) Readwise vector (`Raw/readwise-vector-index.json`, cosine ≥ 0.78); (W-vec) Wiki/Notes/Projects vector (`Raw/wiki-vector-index.json`, cosine ≥ 0.65), feeding matched chunk `text` from the index; (W-kw) MiniSearch fills remaining W slots. Both indices use `Xenova/multilingual-e5-small` in `src/search/vectorStore.js`. Wiki index built by `scripts/embed-wiki.js` (~800-char chunks, 100-char overlap, mtime `--incremental` with orphan prune); not yet in daily cron (planned P1).
 - Wiki article images in `src/render/markdown.js` resolve `![[...]]` and `![]()` via Assets lookup, then vault-root-relative paths under `VAULT_PATH` (e.g. `Raw/work/{stem}/imgs/…`) served as URL-encoded `/vault/…`, else relative to the article file directory.
 - Chat default model is `deepseek-v4-flash` via `CHAT_MODEL`; the UI model dropdown value is honored by the API (`req.body.model` with env fallback).
