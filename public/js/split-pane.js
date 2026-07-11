@@ -1,4 +1,4 @@
-/* Resizable split pane — article + graph/chat side by side. */
+/* Resizable split pane — article + graph/Agent side by side. */
 (function () {
   const STORAGE_KEY = 'wipa-split-mode';
   const STORAGE_RATIO = 'wipa-split-ratio';
@@ -25,7 +25,7 @@
         <div class="split-secondary" id="split-secondary" hidden>
           <div class="split-toolbar" id="split-toolbar">
             <button type="button" class="split-toolbar-btn active" data-pane="graph">Local Graph</button>
-            <button type="button" class="split-toolbar-btn" data-pane="chat">Chat</button>
+            <button type="button" class="split-toolbar-btn" data-pane="agent">Reading Agent</button>
             <button type="button" class="split-toolbar-btn" data-pane="close" style="margin-left:auto">✕</button>
           </div>
           <iframe class="split-pane-frame" id="split-frame" title="Split pane"></iframe>
@@ -63,8 +63,8 @@
     const slug = getSlug();
     const title = document.querySelector('.article-title')?.textContent?.trim() || '';
 
-    if (pane === 'chat') {
-      frame.src = `/chat?embed=1&q=${encodeURIComponent(title)}`;
+    if (pane === 'agent') {
+      frame.src = `/agent?slug=${encodeURIComponent(slug)}&q=${encodeURIComponent(title)}`;
     } else {
       frame.src = `/embed/local-graph/${encodeURIComponent(slug)}`;
     }

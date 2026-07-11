@@ -14,25 +14,22 @@ import { CHAT_API_KEY, CHAT_BASE_URL, CHAT_MODEL } from '../../config.js';
 
 const router = Router();
 
-const client = new OpenAI({
-  apiKey: CHAT_API_KEY || process.env.CHAT_API_KEY || '',
-  baseURL: CHAT_BASE_URL || process.env.CHAT_BASE_URL || 'https://api.deepseek.com/v1',
-});
+let client;
+function getClient() {
+  if (!client) {
+    client = new OpenAI({
+      apiKey: CHAT_API_KEY || process.env.CHAT_API_KEY || '',
+      baseURL: CHAT_BASE_URL || process.env.CHAT_BASE_URL || 'https://api.deepseek.com/v1',
+    });
+  }
+  return client;
+}
 const DEFAULT_MODEL = CHAT_MODEL || 'deepseek-v4-flash';
 
 // ── Shell page ────────────────────────────────────────────────────────────────
 router.get('/chat', async (req, res) => {
-  const embed = req.query.embed === '1';
-  const initialQuery = req.query.q ? String(req.query.q) : '';
-  res.send(await render('chat.html', {
-    pageTitle: 'Chat — LLM KB',
-    activeNav: 'chat',
-    vectorReady: isReady() ? 'true' : 'false',
-    vectorCount: String(isReady() ? getCount() : 0),
-    model: DEFAULT_MODEL,
-    embed: embed ? 'true' : '',
-    initialQuery: initialQuery,
-  }));
+  const query = req.query.q ? `?q=${encodeURIComponent(String(req.query.q))}` : '';
+  res.redirect(`/agent${query}`);
 });
 
 // ── Streaming chat API ────────────────────────────────────────────────────────
@@ -137,7 +134,7 @@ ${contextParts.length > 0 ? contextParts.join('\n\n') : '（当前无相关知�
   })}\n\n`);
 
   try {
-    const stream = await client.chat.completions.create({
+    const stream = await getClient().chat.completions.create({
       model: chatModel,
       messages: [
         { role: 'system', content: systemPrompt },

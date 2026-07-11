@@ -40,7 +40,7 @@
   @media (prefers-reduced-motion:reduce) { .agent-status__dot { animation:none !important; } }
 </style>
 
-<main class="agent-workspace" data-slug="{{slug}}" data-selected-text="{{selectedText}}" data-agent-state="idle">
+<main class="agent-workspace" data-slug="{{slug}}" data-selected-text="{{selectedText}}" data-initial-query="{{initialQuery}}" data-agent-state="idle">
   <section class="agent-column agent-context-column" aria-label="Reading context">
     <div class="agent-kicker">LLM WIPA / READING CONTEXT</div>
     <h1 class="agent-title">What are you trying to understand?</h1>
@@ -101,6 +101,7 @@
     contextCard.querySelector('.agent-context-card__title').textContent = 'Active reading context';
     contextCard.querySelector('.agent-context-card__meta').textContent = 'Wiki article: ' + root.dataset.slug;
   }
+  if (root.dataset.initialQuery) input.value = root.dataset.initialQuery;
   form.addEventListener('submit', async event => {
     event.preventDefault();
     const text = input.value.trim(); if (!text) return;

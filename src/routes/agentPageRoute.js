@@ -9,6 +9,7 @@ router.get('/agent', async (req, res) => {
     activeNav: 'agent',
     slug: String(req.query.slug || ''),
     selectedText: String(req.query.selected || ''),
+    initialQuery: String(req.query.q || ''),
   }));
 });
 

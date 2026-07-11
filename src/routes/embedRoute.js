@@ -60,10 +60,10 @@ router.get('/embed/local-graph/:slug', async (req, res) => {
   res.type('html').send(html);
 });
 
-/** Minimal chat embed for split pane */
+/** Compatibility redirect for old split-pane callers. */
 router.get('/embed/chat', async (req, res) => {
   const q = req.query.q ? String(req.query.q) : '';
-  res.redirect(`/chat?embed=1${q ? '&q=' + encodeURIComponent(q) : ''}`);
+  res.redirect(`/agent${q ? '?q=' + encodeURIComponent(q) : ''}`);
 });
 
 function escapeHtml(s) {

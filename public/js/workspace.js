@@ -4,7 +4,7 @@
   const ACTIVE_KEY = 'wipa-active-tab';
   const MAX_TABS = 12;
   /** Routes that need full page load (inline scripts / special layouts). */
-  const FULL_PAGE_PREFIXES = ['/chat', '/graph', '/flipbook', '/excalidraw/new'];
+  const FULL_PAGE_PREFIXES = ['/agent', '/graph', '/flipbook', '/excalidraw/new'];
 
   function needsFullPage(url) {
     const path = url.split('?')[0];
@@ -30,7 +30,7 @@
     const clean = path.split('?')[0];
     if (clean === '/' || clean === '') return 'Home';
     if (clean.startsWith('/wiki/')) return decodeURIComponent(clean.slice(6)).replace(/-/g, ' ');
-    if (path.startsWith('/chat')) return 'Chat';
+    if (path.startsWith('/agent')) return 'Reading Agent';
     if (path.startsWith('/graph')) return 'Graph';
     if (path.startsWith('/books')) return 'Books';
     if (path.startsWith('/search')) return 'Search';

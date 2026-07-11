@@ -115,7 +115,7 @@ function buildMenu() {
       label: 'Navigate',
       submenu: [
         { label: 'Home', click: () => mainWindow?.loadURL(URL + '/') },
-        { label: 'Chat', click: () => mainWindow?.loadURL(URL + '/chat') },
+        { label: 'Reading Agent', click: () => mainWindow?.loadURL(URL + '/agent') },
         { label: 'Graph', click: () => mainWindow?.loadURL(URL + '/graph') },
         { label: 'Books', click: () => mainWindow?.loadURL(URL + '/books') },
       ],

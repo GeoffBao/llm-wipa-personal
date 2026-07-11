@@ -21,7 +21,7 @@
     { id: 'go-canvas',     title: 'Open Canvas Diagrams',     icon: 'canvas', action: () => nav('/diagrams') },
     { id: 'go-excalidraw', title: 'Open Excalidraw',          icon: 'canvas', action: () => nav('/excalidraw') },
     { id: 'go-readwise',   title: 'Open Readwise Dashboard',  icon: 'book',   action: () => nav('/readwise') },
-    { id: 'go-readwise-chat', title: 'Open Readwise Chat', icon: 'book', action: () => nav('/readwise/chat') },
+    { id: 'go-agent',        title: 'Open Reading Agent',      icon: 'cmd',    action: () => nav('/agent') },
     { id: 'go-books',      title: 'Open Books',               icon: 'book',   action: () => nav('/books') },
     { id: 'go-concepts',   title: 'Browse Concepts',          icon: 'note',   action: () => nav('/browse/concepts') },
     { id: 'go-sources',    title: 'Browse Sources',           icon: 'note',   action: () => nav('/browse/sources') },
@@ -171,7 +171,7 @@
   function activateCurrent() {
     const it = items[active];
     if (!it) return;
-    if (it.type === 'ask') { close(); nav('/chat?q=' + encodeURIComponent(it.query)); }
+    if (it.type === 'ask') { close(); nav('/agent?q=' + encodeURIComponent(it.query)); }
     else if (it.type === 'cmd') { close(); it.cmd.action(); }
     else if (it.type === 'more') { close(); nav('/search?q=' + encodeURIComponent(it.query)); }
     else if (it.type === 'note') { close(); nav('/wiki/' + it.slug); }
