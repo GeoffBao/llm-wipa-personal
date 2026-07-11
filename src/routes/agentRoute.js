@@ -13,6 +13,7 @@ import { buildReadingContext } from '../agent/context.js';
 import { buildAgentContext } from '../agent/retrievalContext.js';
 import { runDefaultAgent } from '../agent/defaultAgent.js';
 import { createHermesClient } from '../agent/hermesClient.js';
+import { approveMemoryCandidate, createMemoryCandidate, createVaultWriter } from '../agent/writeback.js';
 import { getFile } from '../vault/loader.js';
 import { search as keywordSearch } from '../search/index.js';
 import {
@@ -61,6 +62,8 @@ export function createAgentRouter({
   wipaModel,
   hermes,
   vaultPath = VAULT_PATH,
+  candidateStore = new Map(),
+  vaultWriter = createVaultWriter({ vaultPath }),
 } = {}) {
   const router = Router();
   let resolvedWipaModel = wipaModel;
@@ -92,6 +95,27 @@ export function createAgentRouter({
       retrieval: { wikiReady: isWikiReady(), readwiseReady: isReady() },
       hermes: hermesStatus,
     });
+  });
+
+  router.post('/api/agent/memory-candidates', (req, res) => {
+    try {
+      const candidate = createMemoryCandidate(req.body || {});
+      candidateStore.set(candidate.id, candidate);
+      res.status(201).json(candidate);
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  router.post('/api/agent/memory-candidates/:id/approve', async (req, res) => {
+    const candidate = candidateStore.get(req.params.id);
+    if (!candidate) return res.status(404).json({ error: 'candidate not found' });
+    try {
+      const result = await approveMemoryCandidate(candidate, vaultWriter);
+      res.json({ candidate, result });
+    } catch (error) {
+      res.status(502).json({ error: error.message, candidate });
+    }
   });
 
   router.post('/api/agent/query', async (req, res) => {
