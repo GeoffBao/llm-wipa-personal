@@ -2800,3 +2800,18 @@ html[data-theme="dark"] .bkd-highlight { background: rgba(201,162,39,.08); }
   animation: book-overlay-spin 0.7s linear infinite;
 }
 @keyframes book-overlay-spin { to { transform: rotate(360deg); } }
+/* Reading Agent state hooks: visual ownership stays local to the Agent workspace. */
+.agent-workspace[data-agent-state="retrieving"] .agent-conversation-column,
+.agent-workspace[data-agent-state="thinking"] .agent-conversation-column {
+  transition: background-color 320ms ease, box-shadow 320ms ease;
+}
+.agent-workspace[data-agent-state="delegating"] .agent-conversation-column {
+  box-shadow: inset 0 -3px 0 #c7967a;
+}
+@media (prefers-reduced-motion: reduce) {
+  .agent-workspace *, .agent-workspace *::before, .agent-workspace *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
