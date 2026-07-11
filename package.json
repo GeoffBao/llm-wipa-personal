@@ -4,6 +4,7 @@
   "description": "Obsidian knowledge base served as a Wikipedia-inspired local web app",
   "type": "module",
   "scripts": {
+    "test": "node --test",
     "start": "node --env-file=.env server.js",
     "dev": "node --env-file=.env --watch server.js",
     "desktop": "cd desktop && npm start",
