@@ -1,0 +1,131 @@
+<style>
+  body:has(.agent-workspace) .main-content { max-width: none; padding: 0; }
+  body:has(.agent-workspace) .page-body { min-height: calc(100vh - 72px); }
+  .agent-workspace { --agent-paper:#f5f3ee; --agent-ink:#2f3431; --agent-muted:#8e9891; --agent-green:#cbdacf; --agent-terra:#c7967a; display:grid; grid-template-columns:minmax(280px, .95fr) minmax(360px, 1.4fr) minmax(260px, .85fr); min-height:calc(100vh - 72px); background:var(--agent-paper); color:var(--agent-ink); }
+  .agent-column { min-width:0; padding:28px; }
+  .agent-context-column { border-right:1px solid color-mix(in srgb, var(--agent-ink) 10%, transparent); }
+  .agent-conversation-column { display:flex; flex-direction:column; background:color-mix(in srgb, var(--agent-paper) 72%, white); }
+  .agent-evidence-column { border-left:1px solid color-mix(in srgb, var(--agent-ink) 10%, transparent); background:color-mix(in srgb, var(--agent-paper) 88%, white); }
+  .agent-kicker { color:var(--agent-muted); font:600 .68rem/1.3 var(--font-mono, monospace); letter-spacing:.12em; text-transform:uppercase; }
+  .agent-title { margin:10px 0 16px; font:400 clamp(2rem, 3vw, 3.6rem)/1.04 Georgia, serif; letter-spacing:-.04em; }
+  .agent-subtitle { color:var(--agent-muted); line-height:1.65; max-width:32rem; }
+  .agent-context-card, .agent-evidence-card { margin-top:20px; border-radius:16px; background:color-mix(in srgb, white 72%, var(--agent-paper)); padding:16px; box-shadow:0 12px 28px rgba(62,58,50,.06); }
+  .agent-context-card__title { font-weight:600; }
+  .agent-context-card__meta { margin-top:7px; color:var(--agent-muted); font-size:.78rem; }
+  .agent-empty { color:var(--agent-muted); font-size:.9rem; line-height:1.6; }
+  .agent-head { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:22px; }
+  .agent-status { display:flex; align-items:center; gap:9px; color:var(--agent-muted); font-size:.76rem; }
+  .agent-status__dot { width:9px; height:9px; border-radius:50%; background:var(--agent-green); box-shadow:0 0 0 7px color-mix(in srgb, var(--agent-green) 18%, transparent); }
+  .agent-status[data-state="thinking"] .agent-status__dot, .agent-status[data-state="delegating"] .agent-status__dot { animation:agent-breathe 1.2s ease-in-out infinite; background:var(--agent-terra); }
+  @keyframes agent-breathe { 50% { transform:scale(1.45); opacity:.55; } }
+  .agent-messages { flex:1; min-height:220px; overflow:auto; padding:8px 0 24px; }
+  .agent-message { margin:0 0 18px; line-height:1.7; white-space:pre-wrap; }
+  .agent-message--user { color:var(--agent-muted); }
+  .agent-message--assistant { border-left:2px solid var(--agent-terra); padding-left:16px; }
+  .agent-form { margin-top:auto; }
+  .agent-input { width:100%; min-height:100px; resize:vertical; border:1px solid color-mix(in srgb, var(--agent-ink) 16%, transparent); border-radius:16px; background:rgba(255,255,255,.68); color:var(--agent-ink); padding:15px 16px; font:inherit; outline:none; }
+  .agent-input:focus { border-color:var(--agent-terra); box-shadow:0 0 0 4px color-mix(in srgb, var(--agent-terra) 15%, transparent); }
+  .agent-form-row { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-top:10px; }
+  .agent-hint { color:var(--agent-muted); font-size:.72rem; }
+  .agent-button { border:0; border-radius:20px; padding:10px 16px; background:var(--agent-ink); color:white; cursor:pointer; font:600 .78rem/1 var(--font-body, system-ui); }
+  .agent-button:disabled { opacity:.45; cursor:wait; }
+  .agent-section-title { margin:0 0 14px; font:600 .72rem/1.3 var(--font-mono, monospace); letter-spacing:.1em; text-transform:uppercase; color:var(--agent-muted); }
+  .agent-citation { margin-top:12px; padding:12px; border:1px solid color-mix(in srgb, var(--agent-ink) 10%, transparent); border-radius:12px; font-size:.78rem; line-height:1.5; }
+  .agent-citation__kind { color:var(--agent-terra); font:600 .65rem var(--font-mono, monospace); text-transform:uppercase; }
+  .agent-citation__excerpt { display:block; margin-top:6px; color:var(--agent-muted); }
+  .agent-related { margin-top:18px; }
+  .agent-confirm { margin-top:14px; padding:12px; border-radius:12px; background:#efe1d8; color:#684837; font-size:.78rem; }
+  @media (max-width:1100px) { .agent-workspace { grid-template-columns:1fr 1.4fr; } .agent-evidence-column { grid-column:1 / -1; border-left:0; border-top:1px solid color-mix(in srgb, var(--agent-ink) 10%, transparent); } }
+  @media (max-width:760px) { .agent-workspace { display:block; } .agent-column { border:0; border-bottom:1px solid color-mix(in srgb, var(--agent-ink) 10%, transparent); } }
+  @media (prefers-reduced-motion:reduce) { .agent-status__dot { animation:none !important; } }
+</style>
+
+<main class="agent-workspace" data-slug="{{slug}}" data-selected-text="{{selectedText}}" data-agent-state="idle">
+  <section class="agent-column agent-context-column" aria-label="Reading context">
+    <div class="agent-kicker">LLM WIPA / READING CONTEXT</div>
+    <h1 class="agent-title">What are you trying to understand?</h1>
+    <p class="agent-subtitle">阅读内容保持安静。Agent 在旁边理解、检索和连接你的个人知识。</p>
+    <div class="agent-context-card" id="agent-active-context">
+      <div class="agent-context-card__title">No active reading context</div>
+      <div class="agent-context-card__meta">从 Wiki 文章点击 Ask Agent，或直接在中间提问。</div>
+    </div>
+  </section>
+
+  <section class="agent-column agent-conversation-column" aria-label="Default agent">
+    <div class="agent-head">
+      <div><div class="agent-kicker">DEFAULT AGENT</div><div style="margin-top:5px;font-weight:600">Always here, quietly working</div></div>
+      <div class="agent-status" id="agent-status" data-state="idle" aria-live="polite"><span class="agent-status__dot"></span><span id="agent-status-text">Ready</span></div>
+    </div>
+    <div class="agent-messages" id="agent-messages">
+      <div class="agent-empty" id="agent-empty">问我这篇内容与你过去的项目、观点或决定有什么关系。</div>
+    </div>
+    <form class="agent-form" id="agent-form">
+      <textarea class="agent-input" id="agent-input" placeholder="Ask your knowledge agent…" aria-label="Ask your knowledge agent"></textarea>
+      <div class="agent-form-row"><span class="agent-hint">Enter to send · Shift+Enter for new line</span><button class="agent-button" id="agent-send" type="submit">Ask Agent</button></div>
+    </form>
+  </section>
+
+  <aside class="agent-column agent-evidence-column" aria-label="Evidence and related knowledge">
+    <div class="agent-section-title">EVIDENCE / RELATED KNOWLEDGE</div>
+    <div id="agent-evidence"><div class="agent-empty">来源、关联和 Agent 发现会出现在这里。</div></div>
+    <div class="agent-related" id="agent-related"></div>
+  </aside>
+</main>
+
+<script>
+(function () {
+  const root = document.querySelector('.agent-workspace');
+  const form = document.getElementById('agent-form');
+  const input = document.getElementById('agent-input');
+  const send = document.getElementById('agent-send');
+  const messagesEl = document.getElementById('agent-messages');
+  const evidenceEl = document.getElementById('agent-evidence');
+  const statusEl = document.getElementById('agent-status');
+  const statusText = document.getElementById('agent-status-text');
+  const emptyEl = document.getElementById('agent-empty');
+  const contextCard = document.getElementById('agent-active-context');
+  const state = { messages: [], conversationId: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) };
+
+  const setStatus = (phase, label) => { root.dataset.agentState = phase; statusEl.dataset.state = phase; statusText.textContent = label; };
+  const addMessage = (role, text) => { const el = document.createElement('div'); el.className = 'agent-message agent-message--' + role; el.textContent = text; messagesEl.appendChild(el); return el; };
+  const addCitation = citation => {
+    const card = document.createElement('article'); card.className = 'agent-citation';
+    card.innerHTML = '<span class="agent-citation__kind"></span><strong></strong><span class="agent-citation__excerpt"></span>';
+    card.querySelector('.agent-citation__kind').textContent = citation.kind || 'source';
+    card.querySelector('strong').textContent = citation.title || citation.slug || 'Untitled source';
+    card.querySelector('.agent-citation__excerpt').textContent = citation.excerpt || 'No excerpt available.';
+    evidenceEl.querySelector('.agent-empty')?.remove(); evidenceEl.appendChild(card);
+  };
+
+  if (root.dataset.slug) {
+    contextCard.querySelector('.agent-context-card__title').textContent = 'Active reading context';
+    contextCard.querySelector('.agent-context-card__meta').textContent = 'Wiki article: ' + root.dataset.slug;
+  }
+  form.addEventListener('submit', async event => {
+    event.preventDefault();
+    const text = input.value.trim(); if (!text) return;
+    const userMessage = { role: 'user', content: text }; state.messages.push(userMessage); addMessage('user', text);
+    emptyEl?.remove(); input.value = ''; send.disabled = true; setStatus('retrieving', 'Finding context…');
+    const answerEl = addMessage('assistant', ''); let buffer = '';
+    try {
+      const response = await fetch('/api/agent/query', { method: 'POST', headers: {'content-type':'application/json'}, body: JSON.stringify({ messages: state.messages, slug: root.dataset.slug, selectedText: root.dataset.selectedText, conversationId: state.conversationId }) });
+      if (!response.ok) throw new Error((await response.json()).error || 'Agent request failed');
+      const reader = response.body.getReader(); const decoder = new TextDecoder(); let pending = '';
+      while (true) {
+        const {done, value} = await reader.read(); pending += decoder.decode(value || new Uint8Array(), {stream: !done});
+        const frames = pending.split('\n\n'); pending = frames.pop() || '';
+        for (const frame of frames) {
+          const dataLine = frame.split('\n').find(line => line.startsWith('data:')); if (!dataLine) continue;
+          const data = JSON.parse(dataLine.slice(5)); const type = frame.split('\n').find(line => line.startsWith('event:'))?.slice(6).trim() || 'message';
+          if (type === 'status') setStatus(data.phase, data.phase === 'delegating' ? 'Hermes is working…' : 'Thinking…');
+          if (type === 'citation') addCitation(data);
+          if (type === 'delta') { buffer += data.text || ''; answerEl.textContent = buffer; }
+          if (type === 'done') { state.messages.push({ role: 'assistant', content: buffer }); setStatus('complete', 'Ready'); }
+          if (type === 'error') { answerEl.textContent = data.message || 'Agent unavailable'; setStatus('error', 'Needs attention'); }
+        }
+      }
+    } catch (error) { answerEl.textContent = error.message; setStatus('error', 'Needs attention'); }
+    finally { send.disabled = false; input.focus(); }
+  });
+})();
+</script>

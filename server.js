@@ -32,6 +32,7 @@ import chatRouter from './src/routes/chatRoute.js';
 import embedRouter from './src/routes/embedRoute.js';
 import bookDetailRouter from './src/routes/bookDetailRoute.js';
 import agentRouter from './src/routes/agentRoute.js';
+import agentPageRouter from './src/routes/agentPageRoute.js';
 import { CACHE_DIR as FLIPBOOK_CACHE_DIR } from './src/services/flipbook.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -74,6 +75,7 @@ app.use(chatRouter);
 app.use(embedRouter);
 app.use(bookDetailRouter);
 app.use(agentRouter);
+app.use(agentPageRouter);
 
 // Debounced vault watcher
 let rebuildTimer = null;
