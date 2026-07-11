@@ -1,4 +1,10 @@
 <div class="article-page" data-slug="{{slug}}">
+  <style>
+    .article-agent-actions { display:flex; gap:8px; align-items:center; margin-top:12px; }
+    .article-agent-action { border:1px solid color-mix(in srgb, var(--text-muted) 28%, transparent); border-radius:18px; padding:7px 11px; background:var(--bg-card); color:var(--text); font-size:.74rem; text-decoration:none; cursor:pointer; }
+    .article-agent-action:hover { border-color:var(--accent, #c7967a); }
+    .article-selection-agent { position:fixed; z-index:20; display:none; border:0; border-radius:18px; padding:8px 12px; background:#2f3431; color:#fff; box-shadow:0 8px 18px rgba(0,0,0,.16); font-size:.72rem; cursor:pointer; }
+  </style>
 
   <div class="article-breadcrumb">{{{breadcrumb}}}</div>
 
@@ -11,6 +17,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" width="13" height="13"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
         Flipbook
       </a>{{/if}}
+    </div>
+    <div class="article-agent-actions">
+      <a class="article-agent-action" id="article-ask-agent" href="/agent?slug={{slug}}">Ask Agent about this article</a>
+      <span class="article-agent-action" aria-hidden="true">Select text to ask about a passage</span>
     </div>
   </div>
 
@@ -85,3 +95,30 @@
   </div>
 
 </div>
+
+<button class="article-selection-agent" id="article-selection-agent" type="button">Ask Agent about selection</button>
+<script>
+(function () {
+  const page = document.querySelector('.article-page');
+  const body = page?.querySelector('.article-body');
+  const selectionButton = document.getElementById('article-selection-agent');
+  if (!page || !body || !selectionButton) return;
+  let selectedText = '';
+  body.addEventListener('mouseup', () => {
+    const selection = window.getSelection();
+    selectedText = selection?.toString().trim().slice(0, 6000) || '';
+    if (!selectedText || !selection.rangeCount) { selectionButton.style.display = 'none'; return; }
+    const rect = selection.getRangeAt(0).getBoundingClientRect();
+    selectionButton.style.left = Math.max(12, rect.left) + 'px';
+    selectionButton.style.top = Math.max(12, rect.bottom + 8) + 'px';
+    selectionButton.style.display = 'block';
+  });
+  selectionButton.addEventListener('click', () => {
+    const slug = encodeURIComponent(page.dataset.slug || '');
+    window.location.href = '/agent?slug=' + slug + '&selected=' + encodeURIComponent(selectedText);
+  });
+  document.addEventListener('mousedown', event => {
+    if (event.target !== selectionButton) selectionButton.style.display = 'none';
+  });
+})();
+</script>
