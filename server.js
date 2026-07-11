@@ -31,6 +31,7 @@ import { loadVectorStore, loadWikiVectorStore } from './src/search/vectorStore.j
 import chatRouter from './src/routes/chatRoute.js';
 import embedRouter from './src/routes/embedRoute.js';
 import bookDetailRouter from './src/routes/bookDetailRoute.js';
+import agentRouter from './src/routes/agentRoute.js';
 import { CACHE_DIR as FLIPBOOK_CACHE_DIR } from './src/services/flipbook.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -72,6 +73,7 @@ app.use(semanticSearchRouter);
 app.use(chatRouter);
 app.use(embedRouter);
 app.use(bookDetailRouter);
+app.use(agentRouter);
 
 // Debounced vault watcher
 let rebuildTimer = null;
