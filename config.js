@@ -12,6 +12,11 @@ export const CHAT_BASE_URL = process.env.CHAT_BASE_URL || '';
 export const CHAT_API_KEY  = process.env.CHAT_API_KEY  || '';
 export const CHAT_MODEL    = process.env.CHAT_MODEL    || 'deepseek-v4-flash';
 
+/** Local Hermes OpenAI-compatible API. Keep the key server-side. */
+export const HERMES_API_URL = process.env.HERMES_API_URL || 'http://127.0.0.1:8642/v1';
+export const HERMES_API_KEY = process.env.HERMES_API_KEY || '';
+export const HERMES_TIMEOUT_MS = Number(process.env.HERMES_TIMEOUT_MS || 120000);
+
 // Subdirectories under VAULT_PATH/Wiki/ to index
 export const WIKI_SECTIONS = ['concepts', 'sources', 'mocs', 'synthesis', 'prompts', 'people'];
 
