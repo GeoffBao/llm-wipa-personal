@@ -16,7 +16,7 @@ Everything runs on your machine. Nothing leaves it.
 
 ## Reading Agent
 
-Open [`/agent`](http://localhost:3000/agent) as the primary desktop surface. The workspace combines the active reading context, one default Agent, and evidence/related-knowledge cards. The legacy `/chat` page redirects to `/agent`; `/api/chat` remains temporarily as a compatibility endpoint for existing clients.
+Open [`/agent`](http://localhost:3010/agent) as the primary desktop surface during local preview. If port 3010 is unavailable, use the port printed by the server. The workspace combines the active reading context, one default Agent, and evidence/related-knowledge cards. The legacy `/chat` page redirects to `/agent`; `/api/chat` remains temporarily as a compatibility endpoint for existing clients.
 
 The canonical knowledge source is:
 
