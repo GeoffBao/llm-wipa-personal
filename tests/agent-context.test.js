@@ -21,3 +21,8 @@ test('buildReadingContext rejects an unknown slug without exposing filesystem pa
     /document not found/
   );
 });
+
+test('buildReadingContext permits a query with no active reading document', async () => {
+  const context = await buildReadingContext({ messages: [], fileLoader: async () => null });
+  assert.equal(context.document, null);
+});

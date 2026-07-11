@@ -1,19 +1,18 @@
 import { KB_BASE_URL } from '../config.js';
 
 /**
- * Full RAG query: calls /api/chat (SSE stream), aggregates the response,
- * and appends a source list at the end.
+ * Knowledge Gateway query: calls the default Reading Agent SSE endpoint,
+ * aggregates the response, and appends citation metadata.
  */
 export async function askKB(question, useWiki = true) {
   let res;
   try {
-    res = await fetch(`${KB_BASE_URL}/api/chat`, {
+    res = await fetch(`${KB_BASE_URL}/api/agent/query`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         messages: [{ role: 'user', content: question }],
-        useWiki,
-        model: 'deepseek-v4-flash',
+        mode: 'query',
       }),
       signal: AbortSignal.timeout(60_000),
     });
@@ -21,15 +20,14 @@ export async function askKB(question, useWiki = true) {
     return `Failed to reach KB server (${KB_BASE_URL}): ${err.message}\nMake sure llm-wipa is running.`;
   }
 
-  if (!res.ok) return `Chat API error: HTTP ${res.status}`;
+  if (!res.ok) return `Reading Agent API error: HTTP ${res.status}`;
 
   // Consume SSE stream
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
   let buf = '';
   let fullContent = '';
-  let rawSources = [];
-  let wikiSources = [];
+  const citations = [];
 
   while (true) {
     const { done, value } = await reader.read();
@@ -44,11 +42,10 @@ export async function askKB(question, useWiki = true) {
       if (!raw) continue;
       try {
         const evt = JSON.parse(raw);
-        if (evt.type === 'sources') {
-          rawSources = evt.rawSources ?? [];
-          wikiSources = evt.wikiSources ?? [];
-        } else if (evt.type === 'delta') {
-          fullContent += evt.content;
+        if (evt.type === 'delta') {
+          fullContent += evt.text || '';
+        } else if (evt.type === 'citation') {
+          citations.push(evt);
         } else if (evt.type === 'error') {
           return `KB error: ${evt.message}`;
         }
@@ -59,10 +56,7 @@ export async function askKB(question, useWiki = true) {
   if (!fullContent) return 'No response generated.';
 
   // Append source list
-  const srcLines = [
-    ...rawSources.map((s, i) => `[R${i + 1}] "${s.title}" by ${s.author ?? '?'} (${s.category ?? ''})`),
-    ...wikiSources.map((w, i) => `[W${i + 1}] [[${w.title}]] (${w.section ?? 'wiki'})`),
-  ];
+  const srcLines = citations.map(source => `[${source.kind ?? 'source'}] "${source.title}" — ${source.excerpt ?? ''}`);
 
   return srcLines.length
     ? `${fullContent}\n\n---\n**Sources used:**\n${srcLines.join('\n')}`

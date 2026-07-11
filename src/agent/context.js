@@ -12,22 +12,22 @@ export async function buildReadingContext({
   maxMessages = DEFAULT_MAX_MESSAGES,
 }) {
   const normalizedSlug = String(slug).trim();
-  if (!normalizedSlug || normalizedSlug.includes('..') || normalizedSlug.includes('/')) {
+  if (normalizedSlug.includes('..') || normalizedSlug.includes('/')) {
     throw new Error('document not found');
   }
   if (typeof fileLoader !== 'function') {
     throw new TypeError('fileLoader is required');
   }
 
-  const file = await fileLoader(normalizedSlug);
-  if (!file) throw new Error('document not found');
+  const file = normalizedSlug ? await fileLoader(normalizedSlug) : null;
+  if (normalizedSlug && !file) throw new Error('document not found');
 
   return {
-    document: {
+    document: file ? {
       title: String(file.title || normalizedSlug),
       slug: String(file.slug || normalizedSlug),
       body: String(file.body || '').slice(0, maxBodyChars),
-    },
+    } : null,
     selection: String(selectedText || '').slice(0, maxSelectionChars),
     conversation: messages
       .filter(message => message && (message.role === 'user' || message.role === 'assistant'))

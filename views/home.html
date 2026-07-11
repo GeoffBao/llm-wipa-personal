@@ -62,15 +62,15 @@
 <div id="mcp-setup-banner" class="mcp-setup-banner" style="display:none">
   <div class="mcp-setup-banner-icon">🔌</div>
   <div class="mcp-setup-banner-body">
-    <div class="mcp-setup-banner-title">Connect Raycast AI to your Knowledge Base</div>
+    <div class="mcp-setup-banner-title">Connect your agents to the WIPA Knowledge Gateway</div>
     <div class="mcp-setup-banner-desc">
-      Add the MCP server to Raycast so your AI queries automatically pull from your Readwise library and Wiki.
+      Add the MCP server to Raycast, Claude Code, Cursor or Hermes so external agents can query your local WIPA knowledge.
       Go to <strong>Raycast → Settings → Extensions → AI → MCP Servers</strong> and paste:
     </div>
     <div class="mcp-setup-banner-code" id="mcp-config-code">{
   "llm-kb": {
     "command": "node",
-    "args": ["/Users/admin/Documents/ClaudeCode/llm-wipa/mcp/index.js"],
+    "args": ["/Users/admin/Workspace/ClaudeCode/wipagents/mcp/index.js"],
     "env": {
       "VAULT_PATH": "/Users/admin/Workspace/Resources/obsidian/AI-KN-Base",
       "KB_API_URL": "http://localhost:3000"

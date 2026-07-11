@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * LLM KB MCP Server
- * Exposes Eason's Readwise + Obsidian Wiki knowledge base as MCP tools.
+ * Exposes WIPA's local Obsidian knowledge gateway as MCP tools.
  * Transport: stdio (compatible with Raycast AI, Claude Code, Cursor, etc.)
  */
 
@@ -70,7 +70,7 @@ server.tool(
 server.tool(
   'ask_knowledge_base',
   'Ask a question and receive a synthesized answer grounded in the personal knowledge base. ' +
-  'The KB server retrieves relevant Readwise articles and Wiki notes, then generates a structured answer. ' +
+  'The WIPA Reading Agent retrieves relevant Wiki and reading evidence, then generates a structured answer. ' +
   'Best for complex questions that need information from multiple sources.',
   {
     question: z.string().describe('The question to answer'),
