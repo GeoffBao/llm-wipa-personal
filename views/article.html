@@ -19,7 +19,7 @@
       </a>{{/if}}
     </div>
     <div class="article-agent-actions">
-      <a class="article-agent-action" id="article-ask-agent" href="/agent?slug={{slug}}">Ask Agent about this article</a>
+      <a class="article-agent-action" id="article-ask-agent" href="/agent?slug={{slug}}" onclick="if (window.__wipaOpenAgentSplit?.()) return false;">Ask Agent about this article</a>
       <span class="article-agent-action" aria-hidden="true">Select text to ask about a passage</span>
     </div>
   </div>
@@ -101,8 +101,37 @@
 (function () {
   const page = document.querySelector('.article-page');
   const body = page?.querySelector('.article-body');
+  const articleAgentLink = document.getElementById('article-ask-agent');
   const selectionButton = document.getElementById('article-selection-agent');
   if (!page || !body || !selectionButton) return;
+  if (!window.__wipaOpenAgentSplit) {
+    window.__wipaOpenAgentSplit = function () {
+      const main = document.getElementById('main-content');
+      if (!main) return false;
+      let container = document.getElementById('split-container');
+      if (!container) {
+        const original = main.innerHTML;
+        main.innerHTML = `<div class="split-container" id="split-container"><div class="split-primary" id="split-primary">${original}</div><div class="split-divider" id="split-divider"></div><div class="split-secondary" id="split-secondary"><div class="split-toolbar"><button type="button" class="split-toolbar-btn active" data-pane="agent">Reading Agent</button></div><iframe class="split-pane-frame" id="split-frame" title="Reading Agent"></iframe></div></div>`;
+        container = document.getElementById('split-container');
+      }
+      const frame = document.getElementById('split-frame');
+      const slug = page.dataset.slug || '';
+      const title = page.querySelector('.article-title')?.textContent?.trim() || '';
+      if (frame) frame.src = `/agent?slug=${encodeURIComponent(slug)}&q=${encodeURIComponent(title)}`;
+      container?.classList.remove('single-pane');
+      return Boolean(frame);
+    };
+  }
+  const bindAgentLink = () => {
+    articleAgentLink?.addEventListener('click', event => {
+      if (window.__wipaOpenAgentSplit?.()) event.preventDefault();
+    });
+  };
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bindAgentLink, { once: true });
+  } else {
+    bindAgentLink();
+  }
   let selectedText = '';
   body.addEventListener('mouseup', () => {
     const selection = window.getSelection();

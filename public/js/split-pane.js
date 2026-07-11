@@ -164,6 +164,13 @@
     injectSplitButton();
   }
 
+  window.__wipaOpenAgentSplit = function () {
+    if (!isArticlePage()) return false;
+    if (!document.getElementById('split-container')) buildSplitUI();
+    openSplit('agent');
+    return true;
+  };
+
   document.addEventListener('DOMContentLoaded', init);
   window.addEventListener('wipa:navigate', () => {
     setTimeout(init, 50);
