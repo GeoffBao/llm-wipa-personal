@@ -1,7 +1,7 @@
 # LLM WIPA — Personal Knowledge Base
 
 > **W**ikipedia-**I**nspired **P**ersonal **A**rchive  
-> A local web app for Obsidian vaults with semantic search, RAG chat, and MCP integration.
+> A desktop-first Reading Agent for an Obsidian vault, with personal evidence, Hermes execution, and MCP integration.
 
 [![Node.js](https://img.shields.io/badge/Node.js-20%2B-green)](https://nodejs.org)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
@@ -10,9 +10,21 @@
 
 ## What Is This?
 
-LLM WIPA turns your Obsidian vault into a locally-served knowledge base — searchable, browseable, and queryable by AI. It reads vault files directly, embeds your Readwise library for semantic search, exposes a RAG chat interface, and ships an MCP server so Raycast AI and Claude Code can draw from your knowledge while you work.
+WIPA turns your Obsidian vault into a locally-served reading and knowledge-query Agent. It reads the Vault directly, grounds answers in personal evidence, exposes a desktop `/agent` workspace, can delegate approved execution to Hermes, and ships an MCP Knowledge Gateway for other local agents.
 
 Everything runs on your machine. Nothing leaves it.
+
+## Reading Agent
+
+Open [`/agent`](http://localhost:3000/agent) as the primary desktop surface. The workspace combines the active reading context, one default Agent, and evidence/related-knowledge cards. The legacy `/chat` page redirects to `/agent`; `/api/chat` remains temporarily as a compatibility endpoint for existing clients.
+
+The canonical knowledge source is:
+
+```text
+/Users/admin/Workspace/Resources/obsidian/AI-KN-Base
+```
+
+Hermes is an optional execution backend. WIPA remains usable for reading and personal knowledge queries when Hermes is unavailable. See [`docs/integrations/hermes-agent.md`](docs/integrations/hermes-agent.md).
 
 ---
 
