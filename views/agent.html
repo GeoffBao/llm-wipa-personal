@@ -42,6 +42,12 @@
   .agent-citation__excerpt { display:block; margin-top:6px; color:var(--agent-muted); }
   .agent-related { margin-top:18px; }
   .agent-confirm { margin-top:14px; padding:12px; border-radius:12px; background:#efe1d8; color:#684837; font-size:.78rem; }
+  .agent-writeback { display:none; margin-top:20px; padding-top:18px; border-top:1px solid color-mix(in srgb, var(--agent-ink) 10%, transparent); }
+  .agent-writeback.is-visible { display:block; }
+  .agent-writeback__field { display:block; width:100%; box-sizing:border-box; margin:8px 0; border:1px solid color-mix(in srgb, var(--agent-ink) 12%, transparent); border-radius:10px; background:rgba(255,255,255,.58); color:var(--agent-ink); padding:9px 10px; font:inherit; font-size:.78rem; }
+  .agent-writeback__insight { min-height:130px; resize:vertical; }
+  .agent-writeback__actions { display:flex; gap:8px; align-items:center; margin-top:8px; }
+  .agent-writeback__message { color:var(--agent-muted); font-size:.72rem; line-height:1.45; }
   @media (max-width:1100px) { .agent-workspace { grid-template-columns:1fr 1.4fr; } .agent-evidence-column { grid-column:1 / -1; border-left:0; border-top:1px solid color-mix(in srgb, var(--agent-ink) 10%, transparent); } }
   @media (max-width:760px) { .agent-workspace { display:block; } .agent-column { border:0; border-bottom:1px solid color-mix(in srgb, var(--agent-ink) 10%, transparent); } }
   @media (prefers-reduced-motion:reduce) { .agent-status__dot { animation:none !important; } }
@@ -76,6 +82,20 @@
     <div class="agent-section-title">EVIDENCE / RELATED KNOWLEDGE</div>
     <div id="agent-evidence"><div class="agent-empty">来源、关联和 Agent 发现会出现在这里。</div></div>
     <div class="agent-related" id="agent-related"></div>
+    <section class="agent-writeback" id="agent-writeback" aria-label="Memory writeback">
+      <div class="agent-section-title">REVIEWED MEMORY</div>
+      <button class="agent-button" id="agent-save-memory" type="button">Save as memory</button>
+      <div id="agent-writeback-form" hidden>
+        <input class="agent-writeback__field" id="agent-memory-title" placeholder="Memory title" aria-label="Memory title">
+        <textarea class="agent-writeback__field agent-writeback__insight" id="agent-memory-insight" placeholder="Edit the insight before writing it…" aria-label="Memory insight"></textarea>
+        <select class="agent-writeback__field" id="agent-memory-target" aria-label="Memory target">
+          <option value="journey">Journey / daily memory</option>
+          <option value="wiki">Wiki / synthesis</option>
+          <option value="projects">Projects</option>
+        </select>
+        <div class="agent-writeback__actions"><button class="agent-button" id="agent-approve-memory" type="button">Approve and write</button><span class="agent-writeback__message" id="agent-writeback-message">先审核内容，再写入本地 Vault。</span></div>
+      </div>
+    </section>
   </aside>
 </main>
 
@@ -91,6 +111,14 @@
   const statusText = document.getElementById('agent-status-text');
   const emptyEl = document.getElementById('agent-empty');
   const contextCard = document.getElementById('agent-active-context');
+  const writeback = document.getElementById('agent-writeback');
+  const saveMemory = document.getElementById('agent-save-memory');
+  const writebackForm = document.getElementById('agent-writeback-form');
+  const memoryTitle = document.getElementById('agent-memory-title');
+  const memoryInsight = document.getElementById('agent-memory-insight');
+  const memoryTarget = document.getElementById('agent-memory-target');
+  const approveMemory = document.getElementById('agent-approve-memory');
+  const writebackMessage = document.getElementById('agent-writeback-message');
   const state = { messages: [], conversationId: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) };
 
   const setStatus = (phase, label) => { root.dataset.agentState = phase; statusEl.dataset.state = phase; statusText.textContent = label; };
@@ -109,6 +137,31 @@
     contextCard.querySelector('.agent-context-card__meta').textContent = 'Wiki article: ' + root.dataset.slug;
   }
   if (root.dataset.initialQuery) input.value = root.dataset.initialQuery;
+  let latestAnswer = '';
+  saveMemory.addEventListener('click', () => {
+    memoryTitle.value = root.dataset.slug ? `Insight from ${root.dataset.slug}` : 'Agent insight';
+    memoryInsight.value = latestAnswer;
+    writebackForm.hidden = false;
+    saveMemory.hidden = true;
+    memoryInsight.focus();
+  });
+  approveMemory.addEventListener('click', async () => {
+    approveMemory.disabled = true;
+    writebackMessage.textContent = 'Creating reviewed memory…';
+    try {
+      const candidateResponse = await fetch('/api/agent/memory-candidates', { method: 'POST', headers: {'content-type':'application/json'}, body: JSON.stringify({ title: memoryTitle.value, insight: memoryInsight.value, target: memoryTarget.value, source: root.dataset.slug || 'Reading Agent' }) });
+      const candidate = await candidateResponse.json();
+      if (!candidateResponse.ok) throw new Error(candidate.error || 'Could not create memory');
+      const approvalResponse = await fetch(`/api/agent/memory-candidates/${candidate.id}/approve`, { method: 'POST' });
+      const approval = await approvalResponse.json();
+      if (!approvalResponse.ok) throw new Error(approval.error || 'Could not write memory');
+      writebackMessage.textContent = `Written to ${approval.result?.title || memoryTarget.value}.`;
+      writebackForm.hidden = true;
+    } catch (error) {
+      writebackMessage.textContent = error.message;
+      approveMemory.disabled = false;
+    }
+  });
   input.addEventListener('keydown', event => {
     if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); form.requestSubmit(); }
   });
@@ -127,7 +180,7 @@
         const data = JSON.parse(dataLine.slice(5)); const type = frame.split('\n').find(line => line.startsWith('event:'))?.slice(6).trim() || 'message';
         if (type === 'status') setStatus(data.phase, data.phase === 'delegating' ? 'Hermes is working…' : 'Thinking…');
         if (type === 'citation') addCitation(data);
-        if (type === 'delta') { buffer += data.text || ''; answerEl.textContent = buffer; }
+        if (type === 'delta') { buffer += data.text || ''; latestAnswer = buffer; answerEl.textContent = buffer; writeback.classList.add('is-visible'); }
         if (type === 'done') { state.messages.push({ role: 'assistant', content: buffer }); setStatus('complete', 'Ready'); }
         if (type === 'error') { answerEl.textContent = data.message || 'Agent unavailable'; setStatus('error', 'Needs attention'); }
       };
