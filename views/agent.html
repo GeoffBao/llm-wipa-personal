@@ -1,11 +1,18 @@
 <style>
-  body:has(.agent-workspace) .main-content { max-width: none; padding: 0; }
-  body:has(.agent-workspace) .page-body { min-height: calc(100vh - 72px); }
-  .agent-workspace { --agent-paper:#f5f3ee; --agent-ink:#2f3431; --agent-muted:#8e9891; --agent-green:#cbdacf; --agent-terra:#c7967a; display:grid; grid-template-columns:minmax(280px, .95fr) minmax(360px, 1.4fr) minmax(260px, .85fr); min-height:calc(100vh - 72px); background:var(--agent-paper); color:var(--agent-ink); }
+  body:has(.agent-workspace) { background:#f5f4f0; }
+  body:has(.agent-workspace) .site-header { position:fixed; width:100%; background:rgba(245,244,240,.72); border-bottom:0; box-shadow:none; pointer-events:none; }
+  body:has(.agent-workspace) .header-inner { max-width:none; padding:0 24px; }
+  body:has(.agent-workspace) .header-inner > .site-logo { pointer-events:auto; opacity:.78; }
+  body:has(.agent-workspace) .sidebar-toggle, body:has(.agent-workspace) .header-search, body:has(.agent-workspace) .theme-switcher, body:has(.agent-workspace) .header-nav, body:has(.agent-workspace) .mobile-menu-btn { display:none; }
+  body:has(.agent-workspace) .page-body { display:block; max-width:none; min-height:100vh; }
+  body:has(.agent-workspace) .sidebar { display:none; }
+  body:has(.agent-workspace) .main-content { max-width:none; min-height:100vh; padding:0; background:transparent; box-shadow:none; border-radius:0; }
+  .site-footer { display:none !important; }
+  .agent-workspace { --agent-paper:#f5f4f0; --agent-ink:#2f3431; --agent-muted:#8e9891; --agent-green:#cbdacf; --agent-terra:#c7967a; display:grid; grid-template-columns:minmax(280px, .95fr) minmax(360px, 1.4fr) minmax(260px, .85fr); min-height:100vh; padding-top:54px; background:radial-gradient(circle at 12% 12%, rgba(255,255,255,.82), transparent 32%), var(--agent-paper); color:var(--agent-ink); }
   .agent-column { min-width:0; padding:28px; }
-  .agent-context-column { border-right:1px solid color-mix(in srgb, var(--agent-ink) 10%, transparent); }
-  .agent-conversation-column { display:flex; flex-direction:column; background:color-mix(in srgb, var(--agent-paper) 72%, white); }
-  .agent-evidence-column { border-left:1px solid color-mix(in srgb, var(--agent-ink) 10%, transparent); background:color-mix(in srgb, var(--agent-paper) 88%, white); }
+  .agent-context-column { border-right:1px solid color-mix(in srgb, var(--agent-ink) 8%, transparent); }
+  .agent-conversation-column { display:flex; flex-direction:column; background:rgba(255,255,255,.2); }
+  .agent-evidence-column { border-left:1px solid color-mix(in srgb, var(--agent-ink) 8%, transparent); background:rgba(255,255,255,.28); }
   .agent-kicker { color:var(--agent-muted); font:600 .68rem/1.3 var(--font-mono, monospace); letter-spacing:.12em; text-transform:uppercase; }
   .agent-title { margin:10px 0 16px; font:400 clamp(2rem, 3vw, 3.6rem)/1.04 Georgia, serif; letter-spacing:-.04em; }
   .agent-subtitle { color:var(--agent-muted); line-height:1.65; max-width:32rem; }
@@ -102,6 +109,9 @@
     contextCard.querySelector('.agent-context-card__meta').textContent = 'Wiki article: ' + root.dataset.slug;
   }
   if (root.dataset.initialQuery) input.value = root.dataset.initialQuery;
+  input.addEventListener('keydown', event => {
+    if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); form.requestSubmit(); }
+  });
   form.addEventListener('submit', async event => {
     event.preventDefault();
     const text = input.value.trim(); if (!text) return;
@@ -112,18 +122,20 @@
       const response = await fetch('/api/agent/query', { method: 'POST', headers: {'content-type':'application/json'}, body: JSON.stringify({ messages: state.messages, slug: root.dataset.slug, selectedText: root.dataset.selectedText, conversationId: state.conversationId }) });
       if (!response.ok) throw new Error((await response.json()).error || 'Agent request failed');
       const reader = response.body.getReader(); const decoder = new TextDecoder(); let pending = '';
+      const processFrame = frame => {
+        const dataLine = frame.split('\n').find(line => line.startsWith('data:')); if (!dataLine) return;
+        const data = JSON.parse(dataLine.slice(5)); const type = frame.split('\n').find(line => line.startsWith('event:'))?.slice(6).trim() || 'message';
+        if (type === 'status') setStatus(data.phase, data.phase === 'delegating' ? 'Hermes is working…' : 'Thinking…');
+        if (type === 'citation') addCitation(data);
+        if (type === 'delta') { buffer += data.text || ''; answerEl.textContent = buffer; }
+        if (type === 'done') { state.messages.push({ role: 'assistant', content: buffer }); setStatus('complete', 'Ready'); }
+        if (type === 'error') { answerEl.textContent = data.message || 'Agent unavailable'; setStatus('error', 'Needs attention'); }
+      };
       while (true) {
         const {done, value} = await reader.read(); pending += decoder.decode(value || new Uint8Array(), {stream: !done});
         const frames = pending.split('\n\n'); pending = frames.pop() || '';
-        for (const frame of frames) {
-          const dataLine = frame.split('\n').find(line => line.startsWith('data:')); if (!dataLine) continue;
-          const data = JSON.parse(dataLine.slice(5)); const type = frame.split('\n').find(line => line.startsWith('event:'))?.slice(6).trim() || 'message';
-          if (type === 'status') setStatus(data.phase, data.phase === 'delegating' ? 'Hermes is working…' : 'Thinking…');
-          if (type === 'citation') addCitation(data);
-          if (type === 'delta') { buffer += data.text || ''; answerEl.textContent = buffer; }
-          if (type === 'done') { state.messages.push({ role: 'assistant', content: buffer }); setStatus('complete', 'Ready'); }
-          if (type === 'error') { answerEl.textContent = data.message || 'Agent unavailable'; setStatus('error', 'Needs attention'); }
-        }
+        for (const frame of frames) processFrame(frame);
+        if (done) { if (pending.trim()) processFrame(pending); break; }
       }
     } catch (error) { answerEl.textContent = error.message; setStatus('error', 'Needs attention'); }
     finally { send.disabled = false; input.focus(); }
