@@ -56,9 +56,12 @@ router.get('/visualizations/:slug/raw', async (req, res) => {
   if (!v) return res.status(404).send('Not found');
   try {
     const html = await readFile(v.filepath, 'utf8');
+    // Inject base tag so relative assets (e.g. media/*, got-assets/*) resolve
+    // against the vault Visualizations directory served by /vault static mount.
+    const modified = html.replace('<head>', '<head><base href="/vault/Visualizations/">');
     res.set('Content-Type', 'text/html; charset=utf-8');
     res.set('Cache-Control', 'no-cache');
-    res.send(html);
+    res.send(modified);
   } catch {
     res.status(404).send('Not found');
   }

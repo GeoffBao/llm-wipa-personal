@@ -16,7 +16,7 @@ When working on this project, always keep this philosophy in mind. Features that
 - When executing attached implementation plans, leave the plan file unchanged, use the existing todos instead of recreating them, mark the current todo in progress, and continue until all todos are complete.
 - For UI work, self-test the actual page across the active theme and relevant responsive widths, then iterate on visible failures; screenshots from the user should trigger direct debugging and reassessment, not another abstract plan.
 - When the user provides Obsidian plugin or app screenshots as UI reference, implement to match that layout and styling directly.
-- The product direction is Surf (deta/surf)-inspired UI/UX via phased adoption—visual theme, vertical tabs, split panes, macOS Electron shell—keeping the Obsidian vault as data source rather than forking Surf.
+- Product direction is D+: Agent Mind core + Wikipedia-style Wiki shell + mymind-like capture/aesthetics (motion, type-native cards, serendipity); keep phased Surf-inspired chrome (theme, vertical tabs, split panes, macOS Electron) with the Obsidian vault as data source; replace Readwise/Reader with in-product capture; one fixed agent across phone and desktop accumulating the same KB.
 - On sidebar collapse, prefer layout C: card/list pages fill width; home, article, and Journey reading pages keep max-width and center; hero KB×Agent loop visibility must not depend on sidebar width.
 
 ## Learned Workspace Facts

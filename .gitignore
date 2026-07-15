@@ -12,6 +12,9 @@ mcp/node_modules/
 # Claude Code local settings
 .claude/
 
+# Brainstorm visual companion sessions
+.superpowers/
+
 # Playwright MCP session logs (may contain KB page content)
 .playwright-mcp/
 
